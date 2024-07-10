@@ -1,0 +1,13 @@
+Removed Member From Class: ClassName=UWB_V1 Member=R?
+Change Component Comment : Designator=C6 Old Comment=?F New Comment=10uF
+Change Component Designator: OldDesignator=R12 NewDesignator=R13
+Change Component Designator: OldDesignator=R13 NewDesignator=R14
+Change Component Designator: OldDesignator=R14 NewDesignator=R15
+Change Component Designator: OldDesignator=R15 NewDesignator=R16
+Change Component Designator: OldDesignator=R16 NewDesignator=R17
+Change Component Designator: OldDesignator=R17 NewDesignator=R18
+Change Component Designator: OldDesignator=R? NewDesignator=R12
+Added Pin To Net: NetName=GYRO_INT Pin=A1-7
+Added Pin To Net: NetName=GYRO_INT Pin=U5-15
+Added Member To Class: ClassName=UWB_V1 Member=Component R18 Resistor SMD 0603
+Added Room: Name=UWB_V1

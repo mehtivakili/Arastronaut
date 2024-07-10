@@ -1,0 +1,6 @@
+Removed Pin From Net: NetName=GYRO_INT Pin=A1-7
+Removed Pin From Net: NetName=GYRO_INT Pin=U5-15
+Added Pin To Net: NetName=HMC_INT Pin=A1-7
+Added Pin To Net: NetName=HMC_INT Pin=U5-15
+Added Net: Name=HMC_INT
+Added Room: Name=UWB_V1

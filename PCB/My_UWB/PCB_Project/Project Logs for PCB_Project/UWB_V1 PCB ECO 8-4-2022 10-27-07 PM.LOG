@@ -1,0 +1,12 @@
+Removed Pin From Net: NetName=5V Pin=R9-1
+Change Component Designator: OldDesignator=R10 NewDesignator=R9
+Change Component Designator: OldDesignator=R11 NewDesignator=R10
+Change Component Designator: OldDesignator=R12 NewDesignator=R11
+Change Component Designator: OldDesignator=R13 NewDesignator=R12
+Change Component Designator: OldDesignator=R14 NewDesignator=R13
+Change Component Designator: OldDesignator=R15 NewDesignator=R14
+Change Component Designator: OldDesignator=R16 NewDesignator=R15
+Change Component Designator: OldDesignator=R17 NewDesignator=R16
+Added Pin To Net: NetName=5V Pin=U4-16
+Added Member To Class: ClassName=UWB_V1 Member=Component R2 Resistor SMD 0603
+Added Room: Name=UWB_V1

@@ -1,0 +1,47 @@
+Change Component Designator: OldDesignator=D1 NewDesignator=D2
+Change Component Designator: OldDesignator=D2 NewDesignator=D3
+Change Component Designator: OldDesignator=R1 NewDesignator=R2
+Change Component Designator: OldDesignator=R2 NewDesignator=R3
+Change Component Designator: OldDesignator=R3 NewDesignator=R4
+Change Component Designator: OldDesignator=R4 NewDesignator=R5
+Change Component Designator: OldDesignator=R5 NewDesignator=R6
+Change Component Designator: OldDesignator=R6 NewDesignator=R7
+Change Component Designator: OldDesignator=R7 NewDesignator=R8
+Change Component Designator: OldDesignator=R8 NewDesignator=R9
+Change Component Designator: OldDesignator=R9 NewDesignator=R10
+Change Component Designator: OldDesignator=R10 NewDesignator=R11
+Change Component Designator: OldDesignator=R11 NewDesignator=R12
+Change Component Designator: OldDesignator=R12 NewDesignator=R13
+Change Component Designator: OldDesignator=R13 NewDesignator=R14
+Change Component Designator: OldDesignator=R14 NewDesignator=R15
+Change Component Designator: OldDesignator=R15 NewDesignator=R16
+Change Component Designator: OldDesignator=R16 NewDesignator=R17
+Added Component: Designator=D1(LED_V0805-SMD-R (Red))
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Forward Voltage"; Value = "3.2 V"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Part Number"; Value = "150080BS75000"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Peak Wavelength"; Value = "465 nm"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Published Date"; Value = "Jan 2017"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Publisher"; Value = "Ali Hafizi"; VariantName = "[No Variations]"
+Added Component: Designator=R1(R_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "ComponentLink1Description"; Value = "Website: Tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink1URL"; Value = "https://www.tarahiboard.com/"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2Description"; Value = "Telegram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2URL"; Value = "https://t.me/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3Description"; Value = "Instagram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3URL"; Value = "https://instagram.com/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "DatasheetVersion"; Value = "2021"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "1k"; VariantName = "[No Variations]"
+Added Pin To Net: NetName=5V Pin=D1-2
+Added Pin To Net: NetName=GND Pin=R1-1
+Change Net Name : Old Net Name=NetD1_1 New Net Name=NetD2_1
+Change Net Name : Old Net Name=NetD2_1 New Net Name=NetD3_1
+Change Net Name : Old Net Name=NetR1_1 New Net Name=NetR2_1
+Change Net Name : Old Net Name=NetR3_2 New Net Name=NetR4_2
+Added Pin To Net: NetName=NetD1_1 Pin=D1-1
+Added Pin To Net: NetName=NetD1_1 Pin=R1-2
+Added Net: Name=NetD1_1
+Added Member To Class: ClassName=UWB_V1 Member=Component D3 LED SMD PACKAGE
+Added Member To Class: ClassName=UWB_V1 Member=Component R17 Resistor SMD 0603
+Added Room: Name=UWB_V1

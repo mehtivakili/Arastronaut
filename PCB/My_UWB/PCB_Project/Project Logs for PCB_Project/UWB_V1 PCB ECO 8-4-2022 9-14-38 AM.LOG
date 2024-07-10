@@ -1,0 +1,43 @@
+Added Component: Designator=R8(R_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "ComponentLink1Description"; Value = "Website: Tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink1URL"; Value = "https://www.tarahiboard.com/"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2Description"; Value = "Telegram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2URL"; Value = "https://t.me/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3Description"; Value = "Instagram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3URL"; Value = "https://instagram.com/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "DatasheetVersion"; Value = "2021"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "4.7k"; VariantName = "[No Variations]"
+Added Component: Designator=R17(R_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "ComponentLink1Description"; Value = "Website: Tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink1URL"; Value = "https://www.tarahiboard.com/"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2Description"; Value = "Telegram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2URL"; Value = "https://t.me/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3Description"; Value = "Instagram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3URL"; Value = "https://instagram.com/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "DatasheetVersion"; Value = "2021"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "4.7k"; VariantName = "[No Variations]"
+Added Component: Designator=R18(R_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "ComponentLink1Description"; Value = "Website: Tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink1URL"; Value = "https://www.tarahiboard.com/"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2Description"; Value = "Telegram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2URL"; Value = "https://t.me/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3Description"; Value = "Instagram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3URL"; Value = "https://instagram.com/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "DatasheetVersion"; Value = "2021"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "4.7k"; VariantName = "[No Variations]"
+Added Pin To Net: NetName=CS_ACC Pin=R8-1
+Added Pin To Net: NetName=3V3 Pin=R8-2
+Added Pin To Net: NetName=BUS_SCL Pin=R17-1
+Added Pin To Net: NetName=3V3 Pin=R17-2
+Added Pin To Net: NetName=BUS_SDA Pin=R18-1
+Added Pin To Net: NetName=3V3 Pin=R18-2
+Added Member To Class: ClassName=UWB_V1 Member=Component C5 100nF
+Added Member To Class: ClassName=UWB_V1 Member=Component C16 100nF
+Added Member To Class: ClassName=UWB_V1 Member=Component P1 Header 4
+Added Member To Class: ClassName=UWB_V1 Member=Component R8 Resistor SMD 0603
+Added Member To Class: ClassName=UWB_V1 Member=Component R17 Resistor SMD 0603
+Added Member To Class: ClassName=UWB_V1 Member=Component R18 Resistor SMD 0603
+Added Member To Class: ClassName=UWB_V1 Member=Component U2 BMP280

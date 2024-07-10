@@ -1,0 +1,13 @@
+Removed Pin From Net: NetName=NetC6_1 Pin=C6-1
+Removed Pin From Net: NetName=GND Pin=C6-2
+Change Component Footprint: Designator=C6 Old Footprint=cap 02 New Footprint=Tantalum_B
+Change Component Comment : Designator=C6 Old Comment=100uF New Comment=?F
+Change component parameters: Designator = "C6"; Footprint = "Tantalum_B"; UniqueID = "\BDYXKEOG"
+Change component parameters. Clean all parameters for all variants
+Change component parameters (AddParameter): Name = "Data"; Value = "16-12-2016"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Desc."; Value = "CAP SMD 0805"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Designer"; Value = "Abbas Basereh"; VariantName = "[No Variations]"
+Added Pin To Net: NetName=GND Pin=C6-1
+Added Pin To Net: NetName=NetC6_1 Pin=C6-2
+Change Net Name : Old Net Name=NetC6_1 New Net Name=NetC6_2
+Added Room: Name=UWB_V1

@@ -1,0 +1,21 @@
+Added Component: Designator=R?(R_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "ComponentLink1Description"; Value = "Website: Tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink1URL"; Value = "https://www.tarahiboard.com/"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2Description"; Value = "Telegram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2URL"; Value = "https://t.me/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3Description"; Value = "Instagram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3URL"; Value = "https://instagram.com/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "DatasheetVersion"; Value = "2021"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "4.7k"; VariantName = "[No Variations]"
+Added Pin To Net: NetName=GND Pin=R?-1
+Added Pin To Net: NetName=HMC_INT Pin=A1-7
+Added Pin To Net: NetName=HMC_INT Pin=U5-15
+Added Net: Name=HMC_INT
+Added Pin To Net: NetName=NetA1_24 Pin=A1-24
+Added Pin To Net: NetName=NetA1_24 Pin=R?-2
+Added Net: Name=NetA1_24
+Added Member To Class: ClassName=UWB_V1 Member=Component D1 LED SMD PACKAGE
+Added Member To Class: ClassName=UWB_V1 Member=Component R1 Resistor SMD 0603
+Added Member To Class: ClassName=UWB_V1 Member=Component R? Resistor SMD 0603
+Added Room: Name=UWB_V1

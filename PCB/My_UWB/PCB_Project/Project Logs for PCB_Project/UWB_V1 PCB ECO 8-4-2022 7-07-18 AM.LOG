@@ -1,0 +1,10 @@
+Change Component Footprint: Designator=C12 Old Footprint=C_805 New Footprint=cap 02
+Change Component Comment : Designator=C12 Old Comment=0.1uF New Comment=100uF
+Change component parameters: Designator = "C12"; Footprint = "cap 02"; UniqueID = "\RDLJWHWM"
+Change component parameters. Clean all parameters for all variants
+Change component parameters (AddParameter): Name = "Adding Date"; Value = "1387/12/20"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Designer"; Value = "Saeid Jorablo"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Organazation"; Value = "ControTec"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Value"; Value = "100uF"; VariantName = "[No Variations]"
+Change component parameters (AddParameter): Name = "Voltage"; Value = "16V"; VariantName = "[No Variations]"
+Added Room: Name=UWB_V1

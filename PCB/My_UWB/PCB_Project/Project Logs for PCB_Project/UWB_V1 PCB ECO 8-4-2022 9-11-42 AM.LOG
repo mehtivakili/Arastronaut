@@ -1,0 +1,177 @@
+Removed Pin From Net: NetName=CS_ACC Pin=A1-23
+Removed Pin From Net: NetName=CS_GYR Pin=A1-36
+Removed Pin From Net: NetName=3V3 Pin=D3-2
+Removed Pin From Net: NetName=3V3 Pin=D4-2
+Removed Pin From Net: NetName=3V3 Pin=R2-1
+Removed Pin From Net: NetName=CS_GYR Pin=R3-1
+Removed Pin From Net: NetName=CS_ACC Pin=R3-2
+Removed Member From Class: ClassName=UWB_V1 Member=D3
+Removed Member From Class: ClassName=UWB_V1 Member=D4
+Change Component Designator: OldDesignator=BOOT1 NewDesignator=BOOT2
+Change Component Designator: OldDesignator=BOOT2 NewDesignator=BOOT1
+Change Component Designator: OldDesignator=C5 NewDesignator=C6
+Change Component Designator: OldDesignator=C6 NewDesignator=C7
+Change Component Designator: OldDesignator=C7 NewDesignator=C8
+Change Component Designator: OldDesignator=C8 NewDesignator=C9
+Change Component Designator: OldDesignator=C9 NewDesignator=C11
+Change Component Designator: OldDesignator=C10 NewDesignator=C14
+Change Component Designator: OldDesignator=C11 NewDesignator=C12
+Change Component Designator: OldDesignator=C12 NewDesignator=C13
+Change Component Designator: OldDesignator=C13 NewDesignator=C15
+Change Component Designator: OldDesignator=C14 NewDesignator=C10
+Change Component Designator: OldDesignator=C15 NewDesignator=C18
+Change Component Designator: OldDesignator=C16 NewDesignator=C19
+Change Component Designator: OldDesignator=P1 NewDesignator=P2
+Change Component Designator: OldDesignator=R4 NewDesignator=R6
+Change Component Designator: OldDesignator=R5 NewDesignator=R9
+Change Component Designator: OldDesignator=R6 NewDesignator=R10
+Change Component Designator: OldDesignator=R7 NewDesignator=R11
+Change Component Designator: OldDesignator=R8 NewDesignator=R12
+Change Component Designator: OldDesignator=R9 NewDesignator=R13
+Change Component Designator: OldDesignator=R10 NewDesignator=R14
+Change Component Designator: OldDesignator=R11 NewDesignator=R15
+Change Component Designator: OldDesignator=R12 NewDesignator=R7
+Change Component Designator: OldDesignator=R14 NewDesignator=R16
+Change Component Designator: OldDesignator=U2 NewDesignator=U3
+Change Component Designator: OldDesignator=U3 NewDesignator=U4
+Added Component: Designator=C5(C_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Data"; Value = "16-12-2016"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Desc."; Value = "CAP SMD 0805"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Designer"; Value = "Abbas Basereh"; VariantName = "[No Variations]"
+Added Component: Designator=C16(C_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Data"; Value = "16-12-2016"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Desc."; Value = "CAP SMD 0805"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Designer"; Value = "Abbas Basereh"; VariantName = "[No Variations]"
+Added Component: Designator=C17(C_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Data"; Value = "16-12-2016"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Desc."; Value = "CAP SMD 0805"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Designer"; Value = "Abbas Basereh"; VariantName = "[No Variations]"
+Added Component: Designator=C20(C_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Data"; Value = "16-12-2016"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Desc."; Value = "CAP SMD 0805"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Designer"; Value = "Abbas Basereh"; VariantName = "[No Variations]"
+Added Component: Designator=P1(HDR1X4)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "LatestRevisionDate"; Value = "17-Jul-2002"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "LatestRevisionNote"; Value = "Re-released for DXP Platform."; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Publisher"; Value = "Altium Limited"; VariantName = "[No Variations]"
+Added Component: Designator=R4(R_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "ComponentLink1Description"; Value = "Website: Tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink1URL"; Value = "https://www.tarahiboard.com/"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2Description"; Value = "Telegram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2URL"; Value = "https://t.me/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3Description"; Value = "Instagram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3URL"; Value = "https://instagram.com/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "DatasheetVersion"; Value = "2021"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "1k"; VariantName = "[No Variations]"
+Added Component: Designator=R5(R_805)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "ComponentLink1Description"; Value = "Website: Tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink1URL"; Value = "https://www.tarahiboard.com/"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2Description"; Value = "Telegram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink2URL"; Value = "https://t.me/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3Description"; Value = "Instagram"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "ComponentLink3URL"; Value = "https://instagram.com/tarahiboard"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "DatasheetVersion"; Value = "2021"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = "1k"; VariantName = "[No Variations]"
+Added Component: Designator=U2(XDCR_BMP280)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Availability"; Value = "Unavailable"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MF"; Value = ""; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MP"; Value = "BMP280"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Price"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = ""; VariantName = "[No Variations]"
+Added Component: Designator=U5(PLCC16-0.5-3X3MM)
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Availability"; Value = "Unavailable"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Check_prices"; Value = "https://www.snapeda.com/parts/HMC5883L/Honeywell%20Aerospace/view-part/106081/?ref=eda"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MF"; Value = "Honeywell Aerospace"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MP"; Value = "HMC5883L"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package"; Value = "LCC-16 Honeywell"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Price"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SnapEDA_Link"; Value = "https://www.snapeda.com/parts/HMC5883L/Honeywell%20Aerospace/view-part/106081/?ref=snap"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = ""; VariantName = "[No Variations]"
+Added Pin To Net: NetName=CS_ACC Pin=A1-8
+Added Pin To Net: NetName=CS_GYR Pin=A1-10
+Added Pin To Net: NetName=GND Pin=C5-1
+Added Pin To Net: NetName=3V3 Pin=C5-2
+Added Pin To Net: NetName=3V3 Pin=C7-2
+Added Pin To Net: NetName=3V3 Pin=C8-2
+Added Pin To Net: NetName=GND Pin=C16-1
+Added Pin To Net: NetName=3V3 Pin=C16-2
+Added Pin To Net: NetName=GND Pin=C17-2
+Added Pin To Net: NetName=GND Pin=P1-1
+Added Pin To Net: NetName=3V3 Pin=P1-2
+Added Pin To Net: NetName=3V3 Pin=R2-2
+Added Pin To Net: NetName=GND Pin=R3-2
+Added Pin To Net: NetName=3V3 Pin=R4-1
+Added Pin To Net: NetName=GND Pin=R5-1
+Added Pin To Net: NetName=GND Pin=U2-1
+Added Pin To Net: NetName=3V3 Pin=U2-2
+Added Pin To Net: NetName=3V3 Pin=U2-6
+Added Pin To Net: NetName=GND Pin=U2-7
+Added Pin To Net: NetName=3V3 Pin=U2-8
+Added Pin To Net: NetName=3V3 Pin=U3-3
+Added Pin To Net: NetName=3V3 Pin=U3-11
+Added Pin To Net: NetName=3V3 Pin=U5-2
+Added Pin To Net: NetName=3V3 Pin=U5-4
+Added Pin To Net: NetName=GND Pin=U5-9
+Added Pin To Net: NetName=GND Pin=U5-11
+Added Pin To Net: NetName=3V3 Pin=U5-13
+Change Net Name : Old Net Name=NetBOOT2_2 New Net Name=NetBOOT1_2
+Change Net Name : Old Net Name=NetC5_1 New Net Name=NetC6_1
+Change Net Name : Old Net Name=NetC8_2 New Net Name=NetC9_2
+Change Net Name : Old Net Name=NetC9_1 New Net Name=NetC11_1
+Change Net Name : Old Net Name=NetC11_1 New Net Name=NetC12_1
+Change Net Name : Old Net Name=NetR6_2 New Net Name=NetR10_2
+Added Pin To Net: NetName=ACCEL_INT Pin=A1-11
+Added Pin To Net: NetName=ACCEL_INT Pin=U3-1
+Added Net: Name=ACCEL_INT
+Added Pin To Net: NetName=BUS_SCL Pin=A1-36
+Added Pin To Net: NetName=BUS_SCL Pin=P1-3
+Added Pin To Net: NetName=BUS_SCL Pin=U2-4
+Added Pin To Net: NetName=BUS_SCL Pin=U5-1
+Added Net: Name=BUS_SCL
+Added Pin To Net: NetName=BUS_SDA Pin=A1-33
+Added Pin To Net: NetName=BUS_SDA Pin=P1-4
+Added Pin To Net: NetName=BUS_SDA Pin=U2-3
+Added Pin To Net: NetName=BUS_SDA Pin=U5-16
+Added Net: Name=BUS_SDA
+Added Pin To Net: NetName=GYRO_INT Pin=A1-9
+Added Pin To Net: NetName=GYRO_INT Pin=U3-13
+Added Net: Name=GYRO_INT
+Added Pin To Net: NetName=NetC17_1 Pin=C17-1
+Added Pin To Net: NetName=NetC17_1 Pin=U5-10
+Added Net: Name=NetC17_1
+Added Pin To Net: NetName=NetC20_1 Pin=C20-1
+Added Pin To Net: NetName=NetC20_1 Pin=U5-12
+Added Net: Name=NetC20_1
+Added Pin To Net: NetName=NetC20_2 Pin=C20-2
+Added Pin To Net: NetName=NetC20_2 Pin=U5-8
+Added Net: Name=NetC20_2
+Added Pin To Net: NetName=NetR2_1 Pin=R2-1
+Added Pin To Net: NetName=NetR2_1 Pin=R3-1
+Added Pin To Net: NetName=NetR2_1 Pin=U2-5
+Added Net: Name=NetR2_1
+Added Pin To Net: NetName=NetR4_2 Pin=R4-2
+Added Pin To Net: NetName=NetR4_2 Pin=R5-2
+Added Pin To Net: NetName=NetR4_2 Pin=U3-7
+Added Net: Name=NetR4_2
+Added Pin To Net: NetName=NetU3_12 Pin=U3-12
+Added Pin To Net: NetName=NetU3_12 Pin=U3-16
+Added Net: Name=NetU3_12
+Added Member To Class: ClassName=UWB_V1 Member=Component C17 4.7uF
+Added Member To Class: ClassName=UWB_V1 Member=Component C18 22uF
+Added Member To Class: ClassName=UWB_V1 Member=Component C19 0.1uF
+Added Member To Class: ClassName=UWB_V1 Member=Component C20 0.22uF
+Added Member To Class: ClassName=UWB_V1 Member=Component P2 Header 4
+Added Member To Class: ClassName=UWB_V1 Member=Component R16 Resistor SMD 0603
+Added Member To Class: ClassName=UWB_V1 Member=Component U4 CH340G
+Added Member To Class: ClassName=UWB_V1 Member=Component U5 HMC5883L
+Added Room: Name=UWB_V1

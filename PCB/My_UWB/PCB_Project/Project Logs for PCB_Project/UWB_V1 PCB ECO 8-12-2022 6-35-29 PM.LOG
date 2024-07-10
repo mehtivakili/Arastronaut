@@ -1,0 +1,75 @@
+Removed Pin From Net: NetName=GND Pin=P1-1
+Removed Pin From Net: NetName=3V3 Pin=P1-2
+Removed Pin From Net: NetName=BUS_SCL Pin=P1-3
+Removed Pin From Net: NetName=BUS_SDA Pin=P1-4
+Removed Pin From Net: NetName=GND Pin=P2-1
+Removed Pin From Net: NetName=TX_ESP Pin=P2-2
+Removed Pin From Net: NetName=RX_ESP Pin=P2-3
+Removed Pin From Net: NetName=3V3 Pin=P2-4
+Removed Member From Class: ClassName=UWB_V1 Member=P1
+Removed Member From Class: ClassName=UWB_V1 Member=P2
+Added Component: Designator=J2(SM02B-SRSS-TB(LF)(SN))
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Availability"; Value = "Unavailable"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MF"; Value = "JST Sales"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MP"; Value = "SM02B-SRSS-TB_LF__SN_"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Price"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SnapEDA_Link"; Value = "https://www.snapeda.com/parts/SM02B-SRSS-TB%28LF%29%28SN%29/JST%20Sales%20America%20Inc./view-part/447499/?ref=snap"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = ""; VariantName = "[No Variations]"
+Added Component: Designator=J3(SM02B-SRSS-TB(LF)(SN))
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Availability"; Value = "Unavailable"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MF"; Value = "JST Sales"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MP"; Value = "SM02B-SRSS-TB_LF__SN_"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Price"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SnapEDA_Link"; Value = "https://www.snapeda.com/parts/SM02B-SRSS-TB%28LF%29%28SN%29/JST%20Sales%20America%20Inc./view-part/447499/?ref=snap"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = ""; VariantName = "[No Variations]"
+Added Component: Designator=J4(JST_SM04B-SRSS-TB(LF)(SN))
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Availability"; Value = "Unavailable"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MF"; Value = "JST Sales"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MP"; Value = "SM04B-SRSS-TB_LF__SN_"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Price"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SnapEDA_Link"; Value = "https://www.snapeda.com/parts/SM04B-SRSS-TB%28LF%29%28SN%29/JST%20Sales%20America%20Inc./view-part/557466/?ref=snap"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = ""; VariantName = "[No Variations]"
+Added Component: Designator=J5(JST_SM04B-SRSS-TB(LF)(SN))
+Add component. Clean all parameters for all variants
+Add component (AddParameter): Name = "Availability"; Value = "Unavailable"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MF"; Value = "JST Sales"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "MP"; Value = "SM04B-SRSS-TB_LF__SN_"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Package"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Price"; Value = "None"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "SnapEDA_Link"; Value = "https://www.snapeda.com/parts/SM04B-SRSS-TB%28LF%29%28SN%29/JST%20Sales%20America%20Inc./view-part/557466/?ref=snap"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Value"; Value = ""; VariantName = "[No Variations]"
+Added Pin To Net: NetName=GND Pin=J4-1
+Added Pin To Net: NetName=3V3 Pin=J4-2
+Added Pin To Net: NetName=BUS_SCL Pin=J4-3
+Added Pin To Net: NetName=BUS_SDA Pin=J4-4
+Added Pin To Net: NetName=GND Pin=J4-S1
+Added Pin To Net: NetName=GND Pin=J4-S2
+Added Pin To Net: NetName=GND Pin=J5-1
+Added Pin To Net: NetName=TX_ESP Pin=J5-2
+Added Pin To Net: NetName=RX_ESP Pin=J5-3
+Added Pin To Net: NetName=3V3 Pin=J5-4
+Added Pin To Net: NetName=GND Pin=J5-S1
+Added Pin To Net: NetName=GND Pin=J5-S2
+Added Pin To Net: NetName=GPIO4 Pin=A1-26
+Added Pin To Net: NetName=GPIO4 Pin=J3-2
+Added Net: Name=GPIO4
+Added Pin To Net: NetName=GPIO15 Pin=A1-23
+Added Pin To Net: NetName=GPIO15 Pin=J3-1
+Added Net: Name=GPIO15
+Added Pin To Net: NetName=Sensor_VN Pin=A1-5
+Added Pin To Net: NetName=Sensor_VN Pin=J2-1
+Added Net: Name=Sensor_VN
+Added Pin To Net: NetName=Sensor_VP Pin=A1-4
+Added Pin To Net: NetName=Sensor_VP Pin=J2-2
+Added Net: Name=Sensor_VP
+Added Member To Class: ClassName=UWB_V1 Member=Component J2 
+Added Member To Class: ClassName=UWB_V1 Member=Component J3 
+Added Member To Class: ClassName=UWB_V1 Member=Component J4 
+Added Member To Class: ClassName=UWB_V1 Member=Component J5 
+Added Room: Name=UWB_V1

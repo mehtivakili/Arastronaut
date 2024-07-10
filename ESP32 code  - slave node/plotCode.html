@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>ESP32 IMU and Gyro Plotter</title>
+  <script src="static/js/plotly-latest.min.js"></script>
+  <script src="static/js/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMU Configuration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            background-color: #121212;
+            color: #ffffff;
+        }
+        .config-section, .plot-section {
+            padding: 20px;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            margin: 10px;
+        }
+        .config-section {
+            width: 40%;
+        }
+        .plot-section {
+            width: 60%;
+        }
+        h1, h2 {
+            color: #00b300;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input[type="checkbox"], input[type="number"], button {
+            margin-bottom: 10px;
+        }
+        button {
+            background: linear-gradient(90deg, #004d00, #00b300);
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #00b300, #004d00);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #333;
+            text-align: left;
+            color: white;
+        }
+        th {
+            background-color: #333;
+        }
+        .plot {
+            width: 100%;
+            height: 400px;
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+        .hidden {
+            display: none;
+        }
+        .config-row {
+            display: flex;
+            justify-content: space-between;
+        }
+        .config-column {
+            width: 48%;
+        }
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            width: 50%;
+        }
+        .stats div {
+            width: 50%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="config-section">
+        <h1>IMU Configuration</h1>
+        <label for="calibratedCheckbox">Calibrated</label>
+        <input type="checkbox" id="calibrationCheckbox">
+        <form id="configForm">
+            <div id="calibrationParams" class="hidden">
+                <div class="config-row">
+                    <div class="config-column">
+                        <h2>Ta Matrix</h2>
+                        <div id="TaMatrix"></div>
+                        <h2>Ka Matrix</h2>
+                        <div id="KaMatrix"></div>
+                        <h2>Accelerometer Bias</h2>
+                        <div id="accBias"></div>
+                    </div>
+                    <div class="config-column">
+                        <h2>Tg Matrix</h2>
+                        <div id="TgMatrix"></div>
+                        <h2>Kg Matrix</h2>
+                        <div id="KgMatrix"></div>
+                        <h2>Gyroscope Bias</h2>
+                        <div id="gyroBias"></div>
+                    </div>
+                </div>
+                <button type="button" onclick="updateConfig()">Update Config</button>
+                <button type="button" onclick="resetConfig()">Reset to Default</button>
+            </div>
+            <button type="button" onclick="downloadData()">Download Data</button>
+            <button type="button" onclick="resetTio()">Reset Time</button>
+            <h2>Data Collection</h2>
+            <label for="collectionDuration">Collection Duration (s):</label>
+            <input type="number" id="collectionDuration" name="collectionDuration" min="1" step="1" value="10">
+            <label for="collectionInterval">Collection Interval (ms):</label>
+            <input type="number" id="collectionInterval" name="collectionInterval" min="50" step="10" value="1">
+            <button type="button" onclick="startDataCollection()">Start Data Collection</button>
+            <button type="button" onclick="stopDataCollection()">Stop Data Collection</button>
+            <p id="elapsedTime">Elapsed Time: 0s</p>
+            <label for="intervalDuration">Interval Duration (ms):</label>
+            <input type="number" id="samplesPerSec" name="intervalDuration" min="1" value="10">
+        </form>
+    </div>
+    <div class="plot-section">
+        <h1>ESP32 IMU and Gyroscope Real-Time Plotter</h1>
+        <div id="acceleration-plot" class="plot"></div>
+        <div id="gyroscope-plot" class="plot"></div>
+        <div class="stats-container">
+            <div class="stats">
+                <div id="avgRate">Avg Rate from Beginning: 0</div>
+                <div id="dataPerSecond">Data per Second now: 0</div>
+                <div id="leastDataPerSec" style="color: red;">Least Data per Second: 0</div>
+            </div>
+        </div>
+        <table class="data-table" id="dataTable">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Accel X</th>
+                    <th>Accel Y</th>
+                    <th>Accel Z</th>
+                    <th>Gyro X</th>
+                    <th>Gyro Y</th>
+                    <th>Gyro Z</th>
+                </tr>
+            </thead>
+            <tbody id="dataBody">
+                <!-- Data rows will be dynamically generated here -->
+            </tbody>
+        </table>
+    </div>
+  
+  <script>
+  let ws;
+  let time = 0;
+  let accel = [];
+  let gyro = [];
+  let totalDataCount = 0;
+let lastSecondDataCount = 0;
+let lastSecondTimestamp = null;
+  let collectedData = [];
+  let collectingData = false;
+  let startTime = null;
+  let collectionTimer;
+  let eTime = 0;
+  let elapsedTimeInterval;
+//   let intervalDuration = parseInt(document.getElementById('intervalDuration').value);
+//    let intervalDuration = 
+    let samplesPerSec = parseInt(document.getElementById('samplesPerSec').value);
+    document.getElementById('samplesPerSec').addEventListener('change', function() {
+        samplesPerSec = parseInt(this.value);
+    });
+  
+  let lastAvgRate = 0;  // To store the last Avg Rate value
+let leastDataPerSecondValue = 20; // Initialize with a minimum value of 20
+
+function updateStatistics() {
+  const avgRateElement = document.getElementById('avgRate');
+  const dataPerSecondElement = document.getElementById('dataPerSecond');
+  const leastDataPerSecElement = document.getElementById('leastDataPerSec');
+
+  if (totalDataCount > 0 && startTime) {
+    const currentTime = new Date().getTime();
+    const elapsedTimeInSeconds = (currentTime - startTime) / 1000;
+
+    // Update average rate
+    let avgRate = totalDataCount / elapsedTimeInSeconds;
+
+    // Reset Avg Rate if it exceeds 90
+    if (avgRate > 90) {
+      avgRate = lastAvgRate;
+    } else {
+      lastAvgRate = avgRate;
+    }
+
+    avgRateElement.textContent = `Avg Rate: ${avgRate.toFixed(2)}`;
+
+    // Update data per second
+    if (lastSecondTimestamp) {
+      const timeSinceLastSecond = (currentTime - lastSecondTimestamp) / 1000;
+      if (timeSinceLastSecond >= 1) {
+        const currentDataPerSecond = lastSecondDataCount;
+        dataPerSecondElement.textContent = `Data per Second: ${currentDataPerSecond}`;
+        
+        // Update leastDataPerSecond
+        if (currentDataPerSecond < leastDataPerSecondValue && currentDataPerSecond >= 20) {
+          leastDataPerSecondValue = currentDataPerSecond;
+        }
+        leastDataPerSecElement.textContent = `Least Data per Second: ${leastDataPerSecondValue}`;
+
+        lastSecondDataCount = 0;
+        lastSecondTimestamp = currentTime;
+      }
+    } else {
+      lastSecondTimestamp = currentTime;
+    }
+  }
+}
+
+
+  // Global variables for plot data
+        let accPlotData = {
+        x: [],
+        y: [],
+        z: [],
+        time: []
+        };
+        let gyroPlotData = {
+        x: [],
+        y: [],
+        z: [],
+        time: []
+        };
+
+ 
+
+
+// document.getElementById('intervalDuration').addEventListener('change', function() {
+//     intervalDuration = parseInt(this.value);
+// });
+  let formattedTime = 0;
+  let elapsedTime = 0;
+  let manualTime = 0;
+  let collectionDuration = 10000; // Default 10 seconds
+  let collectionInterval = 20; // Default 100 milliseconds
+
+    const defaultConfig = {
+      Ta: [[1, -0.00546066, 0.00101399], [0, 1, 0.00141895], [0, 0, 1]],
+      Ka: [[0.00358347, 0, 0], [0, 0.00358133, 0], [0, 0, 0.00359205]],
+      Tg: [[1, -0.00614889, -0.000546488], [0.0102258, 1, 0.000838491], [0.00412113, 0.0020154, 1]],
+      Kg: [[0.000531972, 0, 0], [0, 0.000531541, 0], [0, 0, 0.000531]],
+      accBias: [-8.28051, -4.6756, -0.870355],
+      gyroBias: [4.53855, 4.001, -1.9779]
+    };
+
+document.addEventListener("DOMContentLoaded", function() {
+  initializeForm('TaMatrix', 'Ta', 3, 3);
+  initializeForm('KaMatrix', 'Ka', 3, 3);
+  initializeForm('TgMatrix', 'Tg', 3, 3);
+  initializeForm('KgMatrix', 'Kg', 3, 3);
+  initializeForm('accBias', 'accBias', 3, 1);
+  initializeForm('gyroBias', 'gyroBias', 3, 1);
+  resetConfig();
+            if (window.location.pathname.includes("/calibration")) {
+                document.querySelector(".config-section").style.display = "none";
+            }
+  const calibrationParams = document.getElementById('calibrationParams');
+  const calibrationCheckbox = document.getElementById('calibrationCheckbox');
+
+  // Initialize WebSocket and wait for connection to open
+  initializeWebSocket(function() {
+    const isCalibrated = calibrationCheckbox.checked;
+    toggleCalibrationParams(isCalibrated);
+    sendCalibrationState(isCalibrated); // Initial state sent to ESP32
+
+    // Add the event listener for the checkbox
+    calibrationCheckbox.addEventListener('change', function() {
+      const isChecked = this.checked;
+      toggleCalibrationParams(isChecked);
+      sendCalibrationState(isChecked); // Send updated state to ESP32
+    });
+  });
+
+  initPlots();
+});
+
+function toggleCalibrationParams(isChecked) {
+  const calibrationParams = document.getElementById('calibrationParams');
+  if (isChecked) {
+    calibrationParams.classList.remove('hidden');
+  } else {
+    calibrationParams.classList.add('hidden');
+  }
+}
+
+function sendCalibrationState(isCalibrated) {
+  // This function sends the calibration state to the ESP32 server
+  ws.send(JSON.stringify({ action: 'setCalibrationState', calibrated: isCalibrated }));
+
+  // fetch('/setCalibrationState', {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ calibrated: isCalibrated })
+  // }).then(response => {
+  //   if (!response.ok) {
+  //     console.error('Failed to set calibration state');
+  //   }
+  // }).catch(error => {
+  //   console.error('Error setting calibration state:', error);
+  // });
+
+}// Update plots with new data
+
+const MAX_SAMPLES = 50;
+
+
+// Initialize plots
+function initPlots() {
+  Plotly.newPlot('acceleration-plot', [
+    { x: [], y: [], mode: 'lines', name: 'Acc X' },
+    { x: [], y: [], mode: 'lines', name: 'Acc Y' },
+    { x: [], y: [], mode: 'lines', name: 'Acc Z' }
+  ], { title: 'Acceleration Data', xaxis: { title: 'Time (s)' }, yaxis: { title: 'Acceleration' } });
+
+  Plotly.newPlot('gyroscope-plot', [
+    { x: [], y: [], mode: 'lines', name: 'Gyro X' },
+    { x: [], y: [], mode: 'lines', name: 'Gyro Y' },
+    { x: [], y: [], mode: 'lines', name: 'Gyro Z' }
+  ], { title: 'Gyroscope Data', xaxis: { title: 'Time (s)' }, yaxis: { title: 'Gyroscope' } });
+}
+const MaXrange = 100;
+function updatePlots(time, accel, gyro) {
+    Plotly.extendTraces('acceleration-plot', {
+        x: [[time], [time], [time]],
+        y: [[accel[0]], [accel[1]], [accel[2]]]
+    }, [0, 1, 2]);
+
+    Plotly.extendTraces('gyroscope-plot', {
+        x: [[time], [time], [time]],
+        y: [[gyro[0]], [gyro[1]], [gyro[2]]]
+    }, [0, 1, 2]);
+
+    const accelPlot = document.getElementById('acceleration-plot');
+    const gyroPlot = document.getElementById('gyroscope-plot');
+
+    // Ensure data arrays do not exceed 200 samples
+    if (accelPlot.data[0].x.length > MAX_SAMPLES) {
+        Plotly.restyle('acceleration-plot', {
+            x: [
+                accelPlot.data[0].x.slice(-MAX_SAMPLES),
+                accelPlot.data[1].x.slice(-MAX_SAMPLES),
+                accelPlot.data[2].x.slice(-MAX_SAMPLES)
+            ],
+            y: [
+                accelPlot.data[0].y.slice(-MAX_SAMPLES),
+                accelPlot.data[1].y.slice(-MAX_SAMPLES),
+                accelPlot.data[2].y.slice(-MAX_SAMPLES)
+            ]
+        });
+    }
+    if (gyroPlot.data[0].x.length > MAX_SAMPLES) {
+        Plotly.restyle('gyroscope-plot', {
+            x: [
+                gyroPlot.data[0].x.slice(-MAX_SAMPLES),
+                gyroPlot.data[1].x.slice(-MAX_SAMPLES),
+                gyroPlot.data[2].x.slice(-MAX_SAMPLES)
+            ],
+            y: [
+                gyroPlot.data[0].y.slice(-MAX_SAMPLES),
+                gyroPlot.data[1].y.slice(-MAX_SAMPLES),
+                gyroPlot.data[2].y.slice(-MAX_SAMPLES)
+            ]
+        });
+    }
+}
+
+
+    function initializeForm(containerId, name, rows, cols) {
+      const container = document.getElementById(containerId);
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.step = '0.001';
+          input.name = `${name}[${i}][${j}]`;
+          input.style.width = '50px';
+          container.appendChild(input);
+        }
+        container.appendChild(document.createElement('br'));
+      }
+    }
+    function resetTio() {
+    // fetch('/resetTio', {
+    //     method: 'POST'
+    // }).then(response => {
+    //     if (response.ok) {
+    //     //alert('Tio has been reset');
+    //     } else {
+    //     alert('Failed to reset Tio');
+    //     }
+    // }).catch(error => {
+    //     console.error('Error resetting Tio:', error);
+    // });
+    // resetTime = formattedTime;
+    manualTime = 0;
+    console.log(formattedTime);
+    
+    }
+
+    function updateConfig() {
+      const formData = new FormData(document.getElementById('configForm'));
+      const config = {
+        Ta: [[formData.get('Ta[0][0]'), formData.get('Ta[0][1]'), formData.get('Ta[0][2]')],
+             [formData.get('Ta[1][0]'), formData.get('Ta[1][1]'), formData.get('Ta[1][2]')],
+             [formData.get('Ta[2][0]'), formData.get('Ta[2][1]'), formData.get('Ta[2][2]')]],
+        Ka: [[formData.get('Ka[0][0]'), formData.get('Ka[0][1]'), formData.get('Ka[0][2]')],
+             [formData.get('Ka[1][0]'), formData.get('Ka[1][1]'), formData.get('Ka[1][2]')],
+             [formData.get('Ka[2][0]'), formData.get('Ka[2][1]'), formData.get('Ka[2][2]')]],
+        Tg: [[formData.get('Tg[0][0]'), formData.get('Tg[0][1]'), formData.get('Tg[0][2]')],
+             [formData.get('Tg[1][0]'), formData.get('Tg[1][1]'), formData.get('Tg[1][2]')],
+             [formData.get('Tg[2][0]'), formData.get('Tg[2][1]'), formData.get('Tg[2][2]')]],
+        Kg: [[formData.get('Kg[0][0]'), formData.get('Kg[0][1]'), formData.get('Kg[0][2]')],
+             [formData.get('Kg[1][0]'), formData.get('Kg[1][1]'), formData.get('Kg[1][2]')],
+             [formData.get('Kg[2][0]'), formData.get('Kg[2][1]'), formData.get('Kg[2][2]')]],
+        accBias: [formData.get('accBias[0][0]'), formData.get('accBias[1][0]'), formData.get('accBias[2][0]')],
+        gyroBias: [formData.get('gyroBias[0][0]'), formData.get('gyroBias[1][0]'), formData.get('gyroBias[2][0]')]
+      };
+      fetch('/updateConfig', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      }).then(response => {
+        if (response.ok) {
+          alert('Configuration updated successfully');
+        } else {
+          alert('Failed to update configuration');
+        }
+      }).catch(error => {
+        console.error('Error updating configuration:', error);
+      });
+    }
+
+    function resetConfig() {
+      setConfigForm(defaultConfig);
+    }
+
+    function setConfigForm(config) {
+      setMatrixValues('Ta', config.Ta);
+      setMatrixValues('Ka', config.Ka);
+      setMatrixValues('Tg', config.Tg);
+      setMatrixValues('Kg', config.Kg);
+      setMatrixValues('accBias', config.accBias);
+      setMatrixValues('gyroBias', config.gyroBias);
+    }
+
+    function setMatrixValues(name, matrix) {
+      for (let i = 0; i < matrix.length; i++) {
+        for (let j = 0; j < matrix[i].length; j++) {
+          document.querySelector(`input[name="${name}[${i}][${j}]"]`).value = matrix[i][j];
+        }
+      }
+    }
+    function collectData() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'collectData' }));
+        }
+    }
+
+
+ function startDataCollection() {
+    const durationElement = document.getElementById('collectionDuration');
+    const samplesPerSecElement = document.getElementById('samplesPerSec');
+
+    if (durationElement && samplesPerSecElement) {
+        const collectionDuration = parseInt(durationElement.value) * 1000;
+        samplesPerSec = parseInt(samplesPerSecElement.value);
+        let elapsedTime = 0;
+        document.getElementById('elapsedTime').innerText = `Elapsed Time: ${elapsedTime}s`;
+        collectedData = [];
+        startTime = new Date().getTime();
+
+        clearInterval(elapsedTimeInterval); // Clear any existing intervals
+        clearTimeout(collectionTimer); // Clear any existing timeouts
+
+        elapsedTimeInterval = setInterval(() => {
+            elapsedTime += 1;
+            document.getElementById('elapsedTime').innerText = `Elapsed Time: ${elapsedTime}s`;
+        }, 1000);
+
+        collectionTimer = setTimeout(stopDataCollection, collectionDuration);
+    } else {
+        console.error('Collection duration or samples per second input elements not found');
+    }
+}
+
+function stopDataCollection() {
+    clearInterval(elapsedTimeInterval);
+    clearTimeout(collectionTimer);
+    console.log('Data collection stopped.');
+}
+
+function downloadData() {
+  const accData = collectedData.map(row => 
+    `${parseFloat(row[0]).toExponential(7)}   ${parseFloat(row[1]).toExponential(7)}   ${parseFloat(row[2]).toExponential(7)}   ${parseFloat(row[3]).toExponential(7)}`).join('\n');
+  const gyroData = collectedData.map(row => 
+    `${parseFloat(row[0]).toExponential(7)}   ${parseFloat(row[4]).toExponential(7)}   ${parseFloat(row[5]).toExponential(7)}   ${parseFloat(row[6]).toExponential(7)}`).join('\n');
+  
+  const accCsvContent = "data:text/csv;charset=utf-8," + accData;
+  const gyroCsvContent = "data:text/csv;charset=utf-8," + gyroData;
+
+  const accEncodedUri = encodeURI(accCsvContent);
+  const gyroEncodedUri = encodeURI(gyroCsvContent);
+
+  const accLink = document.createElement("a");
+  accLink.setAttribute("href", accEncodedUri);
+  accLink.setAttribute("download", "acc.csv");
+  document.body.appendChild(accLink); // Required for FF
+
+  const gyroLink = document.createElement("a");
+  gyroLink.setAttribute("href", gyroEncodedUri);
+  gyroLink.setAttribute("download", "gyro.csv");
+  document.body.appendChild(gyroLink); // Required for FF
+
+  accLink.click();
+  gyroLink.click();
+
+  document.body.removeChild(accLink);
+  document.body.removeChild(gyroLink);
+}
+
+// WebSocket initialization and message handling
+function initializeWebSocket(callback) {
+  console.log("Initializing WebSocket connection...");
+  ws = new WebSocket(`ws://192.168.2.4:81/ws`);
+
+  ws.onopen = function() {
+    console.log("WebSocket connection established");
+    if (callback) {
+      callback();
+    }
+  };
+let lastUpdateTime = 0;
+  ws.onmessage = function(event) {
+    const reader = new FileReader();
+    reader.onload = function() {
+      const arrayBuffer = reader.result;
+      const dataView = new DataView(arrayBuffer);
+      
+      // Decode the time (float64)
+      const time = dataView.getFloat64(0, true);
+
+      // Decode accel data (float32)
+      const acc = [];
+      for (let i = 0; i < 3; i++) {
+        acc.push(parseFloat(dataView.getFloat32(8 + i * 4, true).toFixed(3)));
+      }
+
+      // Decode gyro data (float32)
+      const gyro = [];
+      for (let i = 0; i < 3; i++) {
+        gyro.push(parseFloat(dataView.getFloat32(20 + i * 4, true).toFixed(3)));
+      }
+
+      // console.log(acc);
+      // console.log(gyro);
+
+      // Get the current time
+      const currentTime = new Date().getTime();
+
+      // Set the start time if it's not already set
+      if (!startTime) {
+        startTime = currentTime;
+      }
+
+      // Calculate the elapsed time in seconds
+      const elapsedTime = (currentTime - startTime) / 1000;
+
+      formattedTime = elapsedTime.toFixed(4);
+      eTime = formattedTime;
+      const newRow = document.createElement('tr');
+      newRow.innerHTML = `<td>${formattedTime}</td><td>${acc[0]}</td><td>${acc[1]}</td><td>${acc[2]}</td><td>${gyro[0]}</td><td>${gyro[1]}</td><td>${gyro[2]}</td>`;
+      
+      totalDataCount++;
+      lastSecondDataCount++;
+
+      updateStatistics();
+      const dataBody = document.getElementById('dataBody');
+      dataBody.insertBefore(newRow, dataBody.firstChild);
+
+      // Collect data for download
+      collectedData.push([formattedTime, acc[0], acc[1], acc[2], gyro[0], gyro[1], gyro[2]]);
+
+      if (dataBody.rows.length > 20) {
+        dataBody.deleteRow(20);
+      }
+      
+      if (elapsedTime - lastUpdateTime >= 1 / samplesPerSec) {
+        lastUpdateTime = elapsedTime;
+        updatePlots(formattedTime, acc, gyro);
+      }
+    };
+    reader.readAsArrayBuffer(event.data);
+  };
+
+  ws.onerror = function(error) {
+    console.log("WebSocket error:", error); // Debug log for WebSocket errors
+  };
+
+  ws.onclose = function() {
+    console.log("WebSocket connection closed");
+  };
+}
+  </script>
+</body>
+</html>

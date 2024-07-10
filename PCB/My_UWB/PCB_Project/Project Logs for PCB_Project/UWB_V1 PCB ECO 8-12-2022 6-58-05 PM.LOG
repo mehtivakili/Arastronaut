@@ -1,0 +1,6 @@
+Removed Pin From Net: NetName=GND Pin=J2-3
+Removed Pin From Net: NetName=GND Pin=J2-4
+Removed Pin From Net: NetName=TX_ESP Pin=J5-2
+Removed Pin From Net: NetName=RX_ESP Pin=J5-3
+Added Pin To Net: NetName=RX_ESP Pin=J5-2
+Added Pin To Net: NetName=TX_ESP Pin=J5-3
