@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <title>Firmware Flasher</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        async function getPorts() {
+            const response = await fetch('/get_ports');
+            const ports = await response.json();
+            const portSelect = document.getElementById('port');
+            portSelect.innerHTML = '';
+            ports.forEach(port => {
+                const option = document.createElement('option');
+                option.value = port.device;
+                option.text = `${port.device} - ${port.description}`;
+                portSelect.appendChild(option);
+            });
+        }
+
+        function flashFirmware() {
+            return new Promise((resolve, reject) => {
+                const port = document.getElementById('port').value;
+                const baudrate = document.getElementById('baudrate').value;
+                const group = document.querySelector('input[name="group"]:checked').value;
+
+                const formData = new FormData();
+                formData.append('port', port);
+                formData.append('baudrate', baudrate);
+                formData.append('group', group);
+
+                fetch('/flash', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => response.text())
+                .then(result => {
+                    alert(result);
+                    resolve();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    reject(error);
+                });
+            });
+        }
+
+        function simulateProgressBar() {
+            return new Promise((resolve) => {
+                const progressContainer = document.querySelector('.progress-container');
+                const progressBar = document.getElementById('progress-bar');
+                const progressText = document.getElementById('progress-text');
+                progressContainer.style.display = 'block'; // Show the progress bar
+                let width = 0;
+                const interval = setInterval(() => {
+                    if (width >= 100) {
+                        clearInterval(interval);
+                        resolve();
+                    } else {
+                        width++;
+                        progressBar.style.width = width + '%';
+                        progressText.textContent = `Uploading ${width}%`;
+                    }
+                }, 600); // 600ms * 100 = 60,000ms (1 minute)
+            });
+        }
+
+        function resetProgressBar() {
+            const progressContainer = document.querySelector('.progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            progressBar.style.width = '0%';
+            progressText.textContent = '';
+            progressContainer.style.display = 'none'; // Hide the progress bar
+        }
+
+        async function startFlashing() {
+            try {
+                simulateProgressBar(); // Start the progress bar simulation
+                await flashFirmware(); // Start the flashing process concurrently
+                resetProgressBar(); // Reset the progress bar after flashing is done
+            } catch (error) {
+                console.error('Flashing failed:', error);
+            }
+        }
+
+        window.onload = getPorts;
+    </script>
+    <style>
+        .progress-container {
+            width: 100%;
+            background-color: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: none; /* Initially hide the progress bar */
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+        }
+
+        .radio-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Firmware Flasher</h1>
+        <form onsubmit="event.preventDefault(); startFlashing();">
+            <label for="port">Serial Port:</label>
+            <select id="port" name="port" required></select><br><br>
+            
+            <label for="baudrate">Baud Rate:</label>
+            <input type="number" id="baudrate" name="baudrate" value="115200" required><br><br>
+            
+            <div class="radio-group">
+                <div>
+                    <input type="radio" id="tag" name="group" value="tag" required>
+                    <label for="tag">Tag</label>
+                </div>
+                <div>
+                    <input type="radio" id="anchor" name="group" value="anchor">
+                    <label for="anchor">Anchor</label>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <span id="progress-text"></span>
+            <div class="button-group">
+                <button type="button" onclick="window.location.href='/'">Back</button>
+                <button type="submit">Flash Firmware</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

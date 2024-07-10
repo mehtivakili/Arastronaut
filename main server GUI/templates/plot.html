@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Real-Time Plotly Graph</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Real-Time Data Visualization</h1>
+    <div id="graph"></div>
+    <script>
+        var ws = new WebSocket('ws://localhost:8765');
+
+        var Tio_data = [];
+        var accel_data_x = [];
+        var accel_data_y = [];
+        var accel_data_z = [];
+        var gyro_data_x = [];
+        var gyro_data_y = [];
+        var gyro_data_z = [];
+
+        ws.onmessage = function(event) {
+            var message = JSON.parse(event.data);
+            var Tio = message.Tio;
+            var accel = message.accel;
+            var gyro = message.gyro;
+
+            Tio_data.push(Tio);
+            accel_data_x.push(accel[0]);
+            accel_data_y.push(accel[1]);
+            accel_data_z.push(accel[2]);
+            gyro_data_x.push(gyro[0]);
+            gyro_data_y.push(gyro[1]);
+            gyro_data_z.push(gyro[2]);
+
+            var trace1 = {
+                x: Tio_data,
+                y: accel_data_x,
+                mode: 'lines',
+                name: 'Accel X'
+            };
+
+            var trace2 = {
+                x: Tio_data,
+                y: accel_data_y,
+                mode: 'lines',
+                name: 'Accel Y'
+            };
+
+            var trace3 = {
+                x: Tio_data,
+                y: accel_data_z,
+                mode: 'lines',
+                name: 'Accel Z'
+            };
+
+            var trace4 = {
+                x: Tio_data,
+                y: gyro_data_x,
+                mode: 'lines',
+                name: 'Gyro X'
+            };
+
+            var trace5 = {
+                x: Tio_data,
+                y: gyro_data_y,
+                mode: 'lines',
+                name: 'Gyro Y'
+            };
+
+            var trace6 = {
+                x: Tio_data,
+                y: gyro_data_z,
+                mode: 'lines',
+                name: 'Gyro Z'
+            };
+
+            var data = [trace1, trace2, trace3, trace4, trace5, trace6];
+
+            var layout = {
+                title: 'Real-Time Data',
+                xaxis: {
+                    title: 'Time'
+                },
+                yaxis: {
+                    title: 'Values'
+                }
+            };
+
+            Plotly.react('graph', data, layout);
+        };
+    </script>
+</body>
+</html>

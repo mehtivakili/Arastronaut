@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sensor Data</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Sensor Data</h1>
+    <div id="sensor_data">
+        <p>Tio: <span id="tio">0</span></p>
+        <p>Accel: X: <span id="acc_x">0</span>, Y: <span id="acc_y">0</span>, Z: <span id="acc_z">0</span></p>
+        <p>Gyro: X: <span id="gyro_x">0</span>, Y: <span id="gyro_y">0</span>, Z: <span id="gyro_z">0</span></p>
+    </div>
+
+    <script>
+        var socket = io();
+        document.addEventListener('DOMContentLoaded', function() {
+            openSerial();
+        });
+        socket.on('sensor_data', function(data) {
+            console.log(data);
+            document.getElementById('tio').innerText = data.Tio;
+            document.getElementById('acc_x').innerText = data.acc[0];
+            document.getElementById('acc_y').innerText = data.acc[1];
+            document.getElementById('acc_z').innerText = data.acc[2];
+            document.getElementById('gyro_x').innerText = data.gyro[0];
+            document.getElementById('gyro_y').innerText = data.gyro[1];
+            document.getElementById('gyro_z').innerText = data.gyro[2];
+        });
+
+        async function openSerial() {
+            const port = 'COM6'
+            const baudrate = "115200"
+            const isBinary = true
+            const formData = new FormData();
+            formData.append('port', port);
+            formData.append('baudrate', baudrate);
+            formData.append('is_binary', isBinary);
+
+            const response = await fetch('/open_serial', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                // alert('Serial port opened successfully');
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
