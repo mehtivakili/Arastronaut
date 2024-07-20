@@ -1012,8 +1012,8 @@ void loop() {
   webSocket.loop();
   ArduinoOTA.handle(); // Handle OTA updates
 
-  accel.readSensor();
-  gyro.readSensor();
+  // accel.readSensor();  // rawdata/range
+  // gyro.readSensor();
 
   accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
   gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
