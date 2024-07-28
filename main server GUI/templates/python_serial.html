@@ -230,7 +230,10 @@
         //     console.log('aaa',data)
         // })
         contor = 0
-        socket.on('sensor_data', function(data) {
+        socket.on('sensor_data', function(batch) {
+            batch.forEach(data => {
+                 console.log(data)
+            
             const { Tio, accel, gyro } = data;
             contor += 1;
             // console.log('Received data:', Tio, accel, gyro); // Debug statement
@@ -243,16 +246,7 @@
             gyroY.push(gyro[1]);
             gyroZ.push(gyro[2]);
 
-            Plotly.update('accelPlot', {
-                x: [TioData],
-                y: [accelX, accelY, accelZ]
-            });
-
-            Plotly.update('gyroPlot', {
-                x: [TioData],
-                y: [gyroX, gyroY, gyroZ]
-            });
-
+            
             // Limit the number of points to avoid performance issues
             if (TioData.length > 100) {
                 TioData.shift();
@@ -263,6 +257,18 @@
                 gyroY.shift();
                 gyroZ.shift();
             }
+        });
+
+            Plotly.update('accelPlot', {
+                x: [TioData],
+                y: [accelX, accelY, accelZ]
+            });
+
+            Plotly.update('gyroPlot', {
+                x: [TioData],
+                y: [gyroX, gyroY, gyroZ]
+            });
+
         });
 
         function clearPlots() {

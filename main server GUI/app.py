@@ -273,7 +273,8 @@ def read_serial_data(true):
 
     # most_recent_acc_file = "test_imu_acc.calib"
     # most_recent_gyro_file = "test_imu_gyro.calib"
-
+    batch_size = 10
+    batch_data = []
 
 
     while serial_running:
@@ -302,10 +303,25 @@ def read_serial_data(true):
                                             # Increment the cycle counter
                     cycle_counter += 1
 
+                    # if True :
+                    #     if len(batch_data) >= batch_size:
+                    #         # Emit the batch of data
+                    #         # sio_client.emit('sensor_data', batch_data)
+                    #         # Reset the batch data
+                    #         batch_data = []
                     # Emit data every 20 cycles
-                    if cycle_counter >= 15:
-                        sio_client.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
-                        cycle_counter = 0  # Reset the counter
+                    if cycle_counter >= 2:
+                        #Append data to batch
+                        batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                        if len(batch_data) >= batch_size:
+                            # Emit the batch of data
+                            sio_client.emit('sensor_data', batch_data)
+                            # Reset the batch data
+                            batch_data = []
+                        # Reset the cycle counter
+                        cycle_counter = 0
+                    #     sio_client.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                    #     cycle_counter = 0  # Reset the counter
                     # Write data to CSV file
 
                     # Check for Tio change and calculate rate
