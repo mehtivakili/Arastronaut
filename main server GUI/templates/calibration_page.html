@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Firmware Flasher</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .network-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .back-button {
+            max-width: 150px; /* Half the width of other buttons */
+        }
+    </style>
+</head>
+<body>
+    <div class="network-info">
+        Hostname: {{ network_info.hostname }}<br>
+        Local IP: {{ network_info.local_ip }}<br>
+        SSID: {{ network_info.ssid }}
+    </div>
+    <div class="container">
+        <h1>   Sensor Calibration   </h1>
+
+        <div class="button-container">
+            <!-- <form action="/python_serial" method="post"> -->
+                <!-- <button type="submit">IMU Calibration</button>  -->
+                
+            <!-- <button onclick="location.href='/python_serial'">IMU Calibration</button> -->
+            <div class="button-container">
+                <form action="/python_serial" method="post">
+                    <button type="submit">IMU Calibration</button>
+                </form>
+            <button onclick="location.href='/magnometer_calibration'">Magnometer Calibration</button>
+            <button onclick="location.href='/uwb_calibration'">UWB Calibration</button>
+            <button class="back-button" onclick="location.href='/'">Back</button>
+
+            <!-- <form action="/python_serial" method="post">
+                <button type="submit">Python Serial Monitor</button> -->
+        </div>
+    </div>
+</body>
+</html>

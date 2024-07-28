@@ -54,8 +54,8 @@ void sendIMUData() {
 
    size_t size = sizeof(myArray);
 
-  const char* check = "abc/";
-  Serial.write(check, 4);
+  const char check = 'c';
+  Serial.write(check);
 
   for(int i = 0; i < 7 ; i++){
     binaryFloat hi;

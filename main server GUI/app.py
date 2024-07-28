@@ -116,9 +116,32 @@ def data_acquisition():
 @app.route('/calibration')
 def calibration():
     network_info = get_network_info()
-    return render_template('calibration.html', network_info=network_info)
+    return render_template('calibration_page.html', network_info=network_info)
+
+# @app.route('/calibration_page')
+# def calibration():
+#     network_info = get_network_info()
+#     return render_template('calibration.html', network_info=network_info)
+
+@app.route('/imu_calibration')
+def imu_calibration():
+    network_info = get_network_info()
+    return render_template('imu_calibration.html', network_info=network_info)
+
+@app.route('/magnometer_calibration')
+def magnometer_calibration():
+    network_info = get_network_info()
+    return render_template('magnometer_calibration.html', network_info=network_info)
+
+@app.route('/uwb_calibration')
+def uwb_calibration():
+    network_info = get_network_info()
+    return render_template('uwb_calibration.html', network_info=network_info)
+
+
 
 @app.route('/python_serial', methods=['GET', 'POST'])
+# @app.route('/python_serial')
 def python_serial():
     if request.method == 'POST':
         # try:
@@ -241,7 +264,8 @@ def read_serial_data(true):
     timestamp = datetime.now().strftime("%Y%m%d%H%M")
     acc_filename = f"acc-{timestamp}.csv"
     gyro_filename = f"gyro-{timestamp}.csv"
-
+    global createdFlag
+    createdFlag = True
 
     # Update the most recent filenames
     most_recent_acc_file = acc_filename
@@ -267,7 +291,7 @@ def read_serial_data(true):
                     Tio = numbers[0] - offset
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
-
+                    # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
                     if calibration_enabled:
                         accel, gyro = apply_calibration(accel, gyro)
 
@@ -279,7 +303,7 @@ def read_serial_data(true):
                     cycle_counter += 1
 
                     # Emit data every 20 cycles
-                    if cycle_counter >= 35:
+                    if cycle_counter >= 10:
                         sio_client.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
                         cycle_counter = 0  # Reset the counter
                     # Write data to CSV file
@@ -288,8 +312,8 @@ def read_serial_data(true):
                     if int(Tio) != current_second_start:
                         # Print the rate for the last second
                         print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
-                    # Emit data to all connected clients through the Flask server
-                        # socketio.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                                            # Emit data to all connected clients through the Flask server
+# socketio.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
                     
                     # Emit data to the Node.js server
                         # sio_client.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
@@ -337,7 +361,12 @@ def read_serial_data(true):
                                     acc_writer.writerow(formatted_accel)
                                 with open(gyro_filename, mode='a', newline='') as gyro_file:
                                     gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    gyro_writer.writerow(formatted_gyro)                        
+                                    gyro_writer.writerow(formatted_gyro)    
+
+                            else:
+                                if createdFlag == True:
+                                    print({f"{acc_filename} and {gyro_filename} are created."})
+                                    createdFlag = False
                         else: 
                             start_time = time.time()
 
@@ -368,7 +397,7 @@ def start_client():
 def start_recording():
     print('haha')
     
-    global offset, Timer, acc_filename, gyro_filename
+    global offset, Timer, acc_filename, gyro_filename, createdFlag
     Timer = float(request.form['offset'])
     if True:
         # serial_port.write(b'c')
@@ -376,6 +405,7 @@ def start_recording():
         # data = serial_port.read(28)
         if True:
             # numbers = struct.unpack('<7f', data)
+            createdFlag = True
             offset = numbers[0]
             timestamp = datetime.now().strftime("%Y%m%d%H%M")
             acc_filename = f"acc-{timestamp}.csv"
@@ -431,7 +461,7 @@ def plot_data():
     try:
         # Call the plotting script as a subprocess
         result = subprocess.run(
-            ["python3", "plot_script.py", most_recent_acc_file, most_recent_gyro_file],
+            ["python", "plot_script.py", most_recent_acc_file, most_recent_gyro_file],
             capture_output=True,
             text=True
         )
@@ -581,7 +611,7 @@ def disconnect():
     print('Client disconnected from server')
 
 
-if __name__ == "__main__":0
+if __name__ == "__main__":
     # Start the Socket.IO client in a separate thread
     client_thread = threading.Thread(target=start_client)
     client_thread.start()
