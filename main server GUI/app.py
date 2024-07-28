@@ -303,7 +303,7 @@ def read_serial_data(true):
                     cycle_counter += 1
 
                     # Emit data every 20 cycles
-                    if cycle_counter >= 10:
+                    if cycle_counter >= 15:
                         sio_client.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
                         cycle_counter = 0  # Reset the counter
                     # Write data to CSV file
