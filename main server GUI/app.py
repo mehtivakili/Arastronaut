@@ -257,7 +257,7 @@ def read_serial_data(true):
     time_IO = 0
     cycle_counter = 0  # Counter to keep track of cycles
     # Send the 'c' character to request data
-    check = 'c'
+    check = 'abc/'
     serial_port.write(check.encode())
     # with open('data_log.csv', mode='a', newline='') as file:
     #     writer = csv.writer(file)
@@ -277,8 +277,8 @@ def read_serial_data(true):
 
 
     while serial_running:
-        if serial_port.in_waiting >= 29:  # Wait for the full packet
-            first_byte = serial_port.read(1)  # Read the first byte
+        if serial_port.in_waiting >= 32:  # Wait for the full packet
+            first_byte = serial_port.read(4)  # Read the first byte
             if first_byte == check.encode():  # Check if it matches 'c'
                 data = serial_port.read(28)  # Read the remaining 28 bytes
                 if len(data) == 28:
