@@ -721,7 +721,8 @@ function showMessage() {
             const cycleCounter = parseInt(cycleCounterRange.value, 10);
             const batchSize = parseInt(batchSizeRange.value, 10);
             const rate = cycleCounter * batchSize;
-            sendingRate.textContent = `${rate} ms`;
+            const Hz = 200 / cycleCounter;
+            sendingRate.textContent = `${rate} ms with rate of ${Hz} Hz`;
         }
             async function updateCycleCounter() {
                 const cycleCounter = cycleCounterRange.value;
@@ -766,6 +767,9 @@ function showMessage() {
                 // Initial calculation of the sending rate
                 calculateAndDisplaySendingRate();
         });
+        updateCycleCounter();
+        updateBatchSize();
+        calculateAndDisplaySendingRate();
 
 
         });
