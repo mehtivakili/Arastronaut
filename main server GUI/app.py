@@ -38,6 +38,9 @@ message_queue = queue.Queue()
 
 CORS(app)
 
+cycle_counter_limit = 2
+batch_size = 10
+
 # Calibration parameters
 calibration_enabled = False
 Ta = [[1, -0.00546066, 0.00101399], [0, 1, 0.00141895], [0, 0, 1]]
@@ -137,6 +140,21 @@ def magnometer_calibration():
 def uwb_calibration():
     network_info = get_network_info()
     return render_template('uwb_calibration.html', network_info=network_info)
+
+@app.route('/update_cycle_counter', methods=['POST'])
+def update_cycle_counter():
+    global cycle_counter_limit
+    data = request.json
+    cycle_counter_limit = data.get('cycleCounter', cycle_counter_limit)
+    return jsonify({'status': 'success', 'cycleCounter': cycle_counter_limit})
+
+@app.route('/update_batch_size', methods=['POST'])
+def update_batch_size():
+    global batch_size
+    data = request.json
+    batch_size = data.get('batchSize', batch_size)
+    return jsonify({'status': 'success', 'batchSize': batch_size})
+
 
 
 
@@ -246,6 +264,8 @@ def read_serial_data(true):
     global most_recent_gyro_file
     global calibration_enabled
     global numbers
+    global batch_size
+    global cycle_counter_limit
 
     # offset = 0  # Set this to your required offset
     last_Tio = 0
@@ -273,7 +293,7 @@ def read_serial_data(true):
 
     # most_recent_acc_file = "test_imu_acc.calib"
     # most_recent_gyro_file = "test_imu_gyro.calib"
-    batch_size = 10
+    # batch_size = 10
     batch_data = []
     check = "abc/"
     check_encoded = check.encode()
@@ -320,7 +340,7 @@ def read_serial_data(true):
                         cycle_counter += 1
 
                         # Emit data every 20 cycles
-                        if cycle_counter >= 2:
+                        if cycle_counter >= cycle_counter_limit:
                             # Append data to batch
                             batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
                             if len(batch_data) >= batch_size:

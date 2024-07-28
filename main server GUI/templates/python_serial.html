@@ -232,7 +232,7 @@
         contor = 0
         socket.on('sensor_data', function(batch) {
             batch.forEach(data => {
-                 console.log(data)
+                //  console.log(data)
             
             const { Tio, accel, gyro } = data;
             contor += 1;
@@ -710,7 +710,70 @@ function showMessage() {
                 { x: [], y: [], mode: 'lines', name: 'Gyro Y' },
                 { x: [], y: [], mode: 'lines', name: 'Gyro Z' }
             ], gyroLayout);
+
+            const cycleCounterRange = document.getElementById('cycleCounterRange');
+            const batchSizeRange = document.getElementById('batchSizeRange');
+            const cycleCounterValue = document.getElementById('cycleCounterValue');
+            const batchSizeValue = document.getElementById('batchSizeValue');
+            const sendingRate = document.getElementById('sendingRate');
+
+            function calculateAndDisplaySendingRate() {
+            const cycleCounter = parseInt(cycleCounterRange.value, 10);
+            const batchSize = parseInt(batchSizeRange.value, 10);
+            const rate = cycleCounter * batchSize;
+            sendingRate.textContent = `${rate} ms`;
+        }
+            async function updateCycleCounter() {
+                const cycleCounter = cycleCounterRange.value;
+                cycleCounterValue.textContent = cycleCounter;
+                const response = await fetch('/update_cycle_counter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cycleCounter: parseInt(cycleCounter, 10) })
+                });
+                if (!response.ok) {
+                    alert('Failed to update cycle counter');
+                }
+            }
+
+            async function updateBatchSize() {
+                const batchSize = batchSizeRange.value;
+                batchSizeValue.textContent = batchSize;
+                const response = await fetch('/update_batch_size', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ batchSize: parseInt(batchSize, 10) })
+                });
+                if (!response.ok) {
+                    alert('Failed to update batch size');
+                }
+            }
+
+            cycleCounterRange.addEventListener('input', () => {
+                cycleCounterValue.textContent = cycleCounterRange.value;
+                updateCycleCounter();
+                // Initial calculation of the sending rate
+                calculateAndDisplaySendingRate();
+            });
+            
+            batchSizeRange.addEventListener('input', () => {
+                batchSizeValue.textContent = batchSizeRange.value;
+                updateBatchSize();
+                // Initial calculation of the sending rate
+                calculateAndDisplaySendingRate();
         });
+
+
+        });
+
+
+    // document.getElementById('cycleCounter').addEventListener('change', updateCycleCounter);
+    // document.getElementById('batchSize').addEventListener('change', updateBatchSize);
+
     </script>
 </head>
 <body>
@@ -735,6 +798,25 @@ function showMessage() {
 
                 </form>
             </div>
+            <div class="input-group">
+                <label for="cycleCounterRange">Cycle Counter</label>
+                <input type="range" id="cycleCounterRange" name="cycleCounterRange" min="1" max="100" value="2">
+                <span id="cycleCounterValue">2</span>
+                <small>Set the number of cycles after which data is emitted</small>
+            </div>
+            
+            <div class="input-group">
+                <label for="batchSizeRange">Batch Size</label>
+                <input type="range" id="batchSizeRange" name="batchSizeRange" min="1" max="100" value="10">
+                <span id="batchSizeValue">10</span>
+                <small>Set the number of samples in each batch</small>
+            </div>
+
+            <div class="input-group">
+                <label for="sendingRate">Network Sending Rate</label>
+                <div id="sendingRate">20 ms</div>
+            </div>
+                        
 
             <div>
                 <div class="input-group">
