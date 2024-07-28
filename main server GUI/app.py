@@ -245,6 +245,7 @@ def read_serial_data(true):
     global most_recent_acc_file
     global most_recent_gyro_file
     global calibration_enabled
+    global numbers
 
     # offset = 0  # Set this to your required offset
     last_Tio = 0
@@ -257,8 +258,7 @@ def read_serial_data(true):
     time_IO = 0
     cycle_counter = 0  # Counter to keep track of cycles
     # Send the 'c' character to request data
-    check = 'abc/'
-    serial_port.write(check.encode())
+    # serial_port.write(check.encode())
     # with open('data_log.csv', mode='a', newline='') as file:
     #     writer = csv.writer(file)
     timestamp = datetime.now().strftime("%Y%m%d%H%M")
@@ -275,123 +275,102 @@ def read_serial_data(true):
     # most_recent_gyro_file = "test_imu_gyro.calib"
     batch_size = 10
     batch_data = []
+    check = "abc/"
+    check_encoded = check.encode()
+    check_length = len(check_encoded)
 
+    buffer = bytearray()
 
     while serial_running:
-        if serial_port.in_waiting >= 32:  # Wait for the full packet
-            first_byte = serial_port.read(4)  # Read the first byte
-            if first_byte == check.encode():  # Check if it matches 'c'
-                data = serial_port.read(28)  # Read the remaining 28 bytes
-                if len(data) == 28:
-                    global numbers
-                    numbers = struct.unpack('<7f', data)  # Unpack the 7 floats
-                    if set_offset == False:
-                        offset = numbers[0]
-                        set_offset = True
-                    # Extract data
-                    Tio = numbers[0] - offset
-                    accel = numbers[1:4]
-                    gyro = numbers[4:7]
-                    # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
-                    if calibration_enabled:
-                        accel, gyro = apply_calibration(accel, gyro)
+        if serial_port.in_waiting > 0:
+            buffer.extend(serial_port.read(serial_port.in_waiting))
 
-                    # Initialize the first Tio and current second start
-                    if last_Tio is None:
-                        last_Tio = Tio
-                        current_second_start = int(Tio)
-                                            # Increment the cycle counter
-                    cycle_counter += 1
-
-                    # if True :
-                    #     if len(batch_data) >= batch_size:
-                    #         # Emit the batch of data
-                    #         # sio_client.emit('sensor_data', batch_data)
-                    #         # Reset the batch data
-                    #         batch_data = []
-                    # Emit data every 20 cycles
-                    if cycle_counter >= 2:
-                        #Append data to batch
-                        batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
-                        if len(batch_data) >= batch_size:
-                            # Emit the batch of data
-                            sio_client.emit('sensor_data', batch_data)
-                            # Reset the batch data
-                            batch_data = []
-                        # Reset the cycle counter
-                        cycle_counter = 0
-                    #     sio_client.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
-                    #     cycle_counter = 0  # Reset the counter
-                    # Write data to CSV file
-
-                    # Check for Tio change and calculate rate
-                    if int(Tio) != current_second_start:
-                        # Print the rate for the last second
-                        print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
-                                            # Emit data to all connected clients through the Flask server
-# socketio.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
+            while True:
+                separator_index = buffer.find(check_encoded)
+                if separator_index == -1:
+                    break
+                
+                # Check if we have a full packet after the separator
+                if len(buffer) >= separator_index + check_length + 28:
+                    # Extract the packet
+                    packet_start = separator_index + check_length
+                    packet_end = packet_start + 28
+                    data = buffer[packet_start:packet_end]
                     
-                    # Emit data to the Node.js server
-                        # sio_client.emit('sensor_data', {'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                    if len(data) == 28:
+                        numbers = struct.unpack('<7f', data)  # Unpack the 7 floats
+                        if not set_offset:
+                            offset = numbers[0]
+                            set_offset = True
+                        
+                        # Extract data
+                        Tio = numbers[0] - offset
+                        accel = numbers[1:4]
+                        gyro = numbers[4:7]
+                        # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
+                        if calibration_enabled:
+                            accel, gyro = apply_calibration(accel, gyro)
 
-                        count = packets_count
-                        # data_queue.put(packets_count)
-                        # print(offset)
-                        # Reset the packet count for the new second
-                        packets_count = 0
-                        current_second_start = int(Tio)
+                        # Initialize the first Tio and current second start
+                        if last_Tio is None:
+                            last_Tio = Tio
+                            current_second_start = int(Tio)
 
-                    # Increment the packet count for the current second
-                    packets_count += 1
-                    last_Tio = Tio
+                        # Increment the cycle counter
+                        cycle_counter += 1
 
-                    if (Timer != 0) :
-                        if (start_time != 0):
-                            # Save data to CSV
-                            # writer.writerow([Tio, accel[0], accel[1], accel[2], gyro[0], gyro[1], gyro[2]])
-                            end_time = time.time()
-                            if (end_time - start_time < Timer):
-                                # break
-                                # Open the CSV file in append mode
-                                # with open('data_log.csv', mode='a', newline='') as file:
-                                #     writer = csv.writer(file)
-                                #     # Save data to CSV
-                                #     writer.writerow([Tio, accel[0], accel[1], accel[2], gyro[0], gyro[1], gyro[2]])
-                                # with open(acc_filename, mode='a', newline='') as acc_file:
-                                #     acc_writer = csv.writer(acc_file)
-                                #     # acc_writer.writerow([Tio, accel[0], accel[1], accel[2]])
-                                #     acc_writer.writerow([f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"])
-                                # with open(gyro_filename, mode='a', newline='') as gyro_file:
-                                #     gyro_writer = csv.writer(gyro_file)
-                                #     # gyro_writer.writerow([Tio, gyro[0], gyro[1], gyro[2]])
-                                #     gyro_writer.writerow([f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"])
+                        # Emit data every 20 cycles
+                        if cycle_counter >= 2:
+                            # Append data to batch
+                            batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                            if len(batch_data) >= batch_size:
+                                # Emit the batch of data
+                                sio_client.emit('sensor_data', batch_data)
+                                # Reset the batch data
+                                batch_data = []
+                            # Reset the cycle counter
+                            cycle_counter = 0
 
-                                formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                                formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+                        # Check for Tio change and calculate rate
+                        if int(Tio) != current_second_start:
+                            # Print the rate for the last second
+                            print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
 
-                                # formatted_accel_str = "   ".join(formatted_accel)
-                                # formatted_gyro_str = "   ".join(formatted_gyro)
+                            # Reset the packet count for the new second
+                            packets_count = 0
+                            current_second_start = int(Tio)
 
-                                with open(acc_filename, mode='a', newline='') as acc_file:
-                                    acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    acc_writer.writerow(formatted_accel)
-                                with open(gyro_filename, mode='a', newline='') as gyro_file:
-                                    gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    gyro_writer.writerow(formatted_gyro)    
+                        # Increment the packet count for the current second
+                        packets_count += 1
+                        last_Tio = Tio
 
+                        if Timer != 0:
+                            if start_time != 0:
+                                end_time = time.time()
+                                if (end_time - start_time < Timer):
+                                    formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                                    formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+
+                                    with open(acc_filename, mode='a', newline='') as acc_file:
+                                        acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                        acc_writer.writerow(formatted_accel)
+                                    with open(gyro_filename, mode='a', newline='') as gyro_file:
+                                        gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                        gyro_writer.writerow(formatted_gyro)
+                                else:
+                                    if createdFlag:
+                                        print(f"{acc_filename} and {gyro_filename} are created.")
+                                        createdFlag = False
                             else:
-                                if createdFlag == True:
-                                    print({f"{acc_filename} and {gyro_filename} are created."})
-                                    createdFlag = False
-                        else: 
-                            start_time = time.time()
+                                start_time = time.time()
 
-
+                        # Remove the processed packet and the separator from the buffer
+                        buffer = buffer[packet_end:]
+                    else:
+                        print(f"Expected 28 bytes but received {len(data)} bytes.")
+                        break
                 else:
-                    print(f"Expected 28 bytes but received {len(data)} bytes.")
-            else:
-                print("First byte did not match expected 'c' character.")
-                # Handle unexpected first byte case if needed
+                    break
 
 Timer = 0
 
