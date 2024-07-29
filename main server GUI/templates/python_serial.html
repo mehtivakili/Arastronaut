@@ -57,13 +57,15 @@
         }
         .side-container {
             width: 30%;
-            background-color: #1e1e1e;
+            background-color: rgba(30, 30, 30, 0.8); /* More transparent */
             padding: 20px;
             margin-left: 10px;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px); /* Ensure the side container fits within the viewport */
         }
         .serial-monitor {
             width: 70%;
@@ -83,6 +85,8 @@
             background: #333;
             color: white;
             width: 100%;
+            box-sizing: border-box;
+            font-size: 12px; /* Smaller font size for more compact elements */
         }
         input[type="number"] {
             -moz-appearance: textfield;
@@ -93,8 +97,19 @@
             margin: 0;
         }
         .input-group {
-            display: flex;
-            gap: 10px;
+            margin-bottom: 15px; /* Reduced margin for more compact layout */
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .input-group small {
+            display: block;
+            margin-top: 5px;
+            color: #bbb;
+        }
+        .input-group div {
+            margin-top: 5px;
         }
         button {
             background: linear-gradient(90deg, #004d00, #00b300);
@@ -113,28 +128,21 @@
             border-radius: 10px;
             font-size: 12px;
         }
-
         #startStopButton.stop-recording {
             background-color: red;
             color: white;
             font-weight: bold;
-            background: none; /* Remove gradient to apply solid color */
-            /* background: linear-gradient(90deg, #ff0425, #4e011f); */
+            background: none;
             background: #ff0425;
         }
-
-        /* Hover state for the stop-recording button */
         #startStopButton.stop-recording:hover {
-            /* background: linear-gradient(90deg, #4e011f, #ff0425); */
             background: radial-gradient(circle, #4e011f 0%, #ff0425 100%);
-}
-
+        }
         #actionButtons {
             display: flex;
             justify-content: space-between;
             gap: 10px;
-}
-
+        }
         #actionButtons button {
             flex: 1;
         }
@@ -144,10 +152,9 @@
         }
         .flex-container {
             display: flex;
-            align-items: center; /* Center items vertically */
-            gap: 10px; /* Space between final time and message */
+            align-items: center;
+            gap: 10px;
         }
-
         @keyframes slow-flash {
             0%, 100% {
                 opacity: 1;
@@ -156,25 +163,22 @@
                 opacity: 0.1;
             }
         }
-
         .flash {
             color: red;
-            animation: slow-flash 2s infinite; /* Adjust duration as needed */
+            animation: slow-flash 2s infinite;
         }
-
         #timerDisplayContainer {
             display: flex;
             justify-content: center;
             align-items: center;
             margin: 20px;
-            position: relative;}
-
-        #timerDisplay {
-            font-size: 2em;
-            font-weight: bold;
-            z-index: 1; /* Ensure it's above the ring */
+            position: relative;
         }
-
+        #timerDisplay {
+            font-size: 1.5em;
+            font-weight: bold;
+            z-index: 1;
+        }
         @keyframes flashingRing {
             0% {
                 box-shadow: 0 0 10px 2px rgba(255, 0, 0, 0.5);
@@ -186,24 +190,274 @@
                 box-shadow: 0 0 10px 2px rgba(255, 0, 0, 0.5);
             }
         }
-
         .flashing-ring {
             content: '';
             position: absolute;
-            width: 100px; /* Adjust size as needed */
-            height: 100px; /* Adjust size as needed */
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            animation: flashingRing 2s infinite; /* Adjust timing as needed */
+            animation: flashingRing 2s infinite;
+        }
+        .theme-toggle-button {
+            /* position: fixed; */
+            top: 20px;
+            right: 20px;
+            background-color: #00b300;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .theme-toggle-button:hover {
+            background-color: #004d00;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+        }
+
+        body.light-theme .theme-toggle-button {
+            background-color: #d3d3d3;
+            color: #000;
+        }
+
+        body.light-theme .theme-toggle-button:hover {
+            background-color: #a9a9a9;
         }
 
         
-
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
+    <style>
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+    </style>
+    
+    <body>
+        <div id="particles-js"></div>
+        <script>
+            particlesJS('particles-js',
+            {
+                "particles": {
+                    "number": {
+                        "value": 80,
+                        "density": {
+                            "enable": true,
+                            "value_area": 800
+                        }
+                    },
+                    "color": {
+                        "value": "#ffffff"
+                    },
+                    "shape": {
+                        "type": "circle",
+                        "stroke": {
+                            "width": 0,
+                            "color": "#000000"
+                        },
+                        "polygon": {
+                            "nb_sides": 5
+                        }
+                    },
+                    "opacity": {
+                        "value": 0.5,
+                        "random": false,
+                        "anim": {
+                            "enable": false,
+                            "speed": 1,
+                            "opacity_min": 0.1,
+                            "sync": false
+                        }
+                    },
+                    "size": {
+                        "value": 3,
+                        "random": true,
+                        "anim": {
+                            "enable": false,
+                            "speed": 40,
+                            "size_min": 0.1,
+                            "sync": false
+                        }
+                    },
+                    "line_linked": {
+                        "enable": true,
+                        "distance": 150,
+                        "color": "#ffffff",
+                        "opacity": 0.4,
+                        "width": 1
+                    },
+                    "move": {
+                        "enable": true,
+                        "speed": 6,
+                        "direction": "none",
+                        "random": false,
+                        "straight": false,
+                        "out_mode": "out",
+                        "bounce": false,
+                        "attract": {
+                            "enable": false,
+                            "rotateX": 600,
+                            "rotateY": 1200
+                        }
+                    }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": {
+                        "onhover": {
+                            "enable": true,
+                            "mode": "repulse"
+                        },
+                        "onclick": {
+                            "enable": true,
+                            "mode": "push"
+                        },
+                        "resize": true
+                    },
+                    "modes": {
+                        "grab": {
+                            "distance": 400,
+                            "line_linked": {
+                                "opacity": 1
+                            }
+                        },
+                        "bubble": {
+                            "distance": 400,
+                            "size": 40,
+                            "duration": 2,
+                            "opacity": 8,
+                            "speed": 3
+                        },
+                        "repulse": {
+                            "distance": 200,
+                            "duration": 0.4
+                        },
+                        "push": {
+                            "particles_nb": 4
+                        },
+                        "remove": {
+                            "particles_nb": 2
+                        }
+                    }
+                },
+                "retina_detect": true
+            });
+        </script>
+        <script>
+            function toggleTheme() {
+                document.body.classList.toggle('light-theme');
+            }
+        </script>
+        
+        <div class="top-container">
+            <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
+            <h1>Serial Monitor</h1>
+        </div>
+        <div class="main-container">
+            <div class="side-container">
+                <button class="theme-toggle-button" onclick="toggleTheme()">Toggle Theme</button>
+
+                <div id="configSerial">
+                    <h2>Select Serial Port</h2>
+                    <form onsubmit="event.preventDefault(); openSerial();">
+                        <div class="input-group">
+                            <select id="port" name="port" required></select>
+                            <input type="number" id="baudrate" name="baudrate" placeholder="Baud Rate" value="115200" required>
+                        </div>
+                        <button onclick="clearPlots()"  type="submit">Open Serial Port</button>
+                    </form>
+                </div>
+
+                <div class="input-group">
+                    <label for="cycleCounterRange">Cycle Counter</label>
+                    <input type="range" id="cycleCounterRange" name="cycleCounterRange" min="1" max="100" value="10">
+                    <span id="cycleCounterValue">10</span>
+                    <small>Set the number of cycles after which data is emitted</small>
+                </div>
+                <div class="input-group">
+                    <label for="batchSizeRange">Batch Size</label>
+                    <input type="range" id="batchSizeRange" name="batchSizeRange" min="1" max="100" value="20">
+                    <span id="batchSizeValue">20</span>
+                    <small>Set the number of samples in each batch</small>
+                </div>
+
+                <div class="input-group">
+                    <label for="sendingRate">Network Sending Rate</label>
+                    <div id="sendingRate">200 ms</div>
+                </div>
+                <div class="input-group">
+                    <label for="recordingName">File Name</label>
+                    <input type="text" id="recordingName" name="fileName" placeholder="please enter the file name" required>
+                </div>
+                <div class="input-group">
+                    <label for="initiationStaticInterval">Initiation Static Interval</label>
+                    <input type="number" id="initiationStaticInterval" name="initiationStaticInterval" placeholder="50" value="50" required>
+                    <small>Recommended: 50 seconds</small>
+                </div>
+                <div class="input-group">
+                    <label for="turnCounts">Turn Counts</label>
+                    <input type="number" id="turnCounts" name="turnCounts" placeholder="40" value="40" required>
+                    <small>Recommended: 36 to 50 turns</small>
+                </div>
+                <div class="input-group">
+                    <label for="T_wait">T_wait</label>
+                    <input type="number" id="T_wait" name="T_wait" placeholder="4" value="4" required>
+                    <small>Recommended: 1 to 4 seconds</small>
+                </div>
+                <div style="display: flex; flex-direction: row; gap: 10px;">
+                    <p id="finalTimeDisplay">Final Time: 0 seconds</p>
+                    <div id="timerDisplayContainer">
+                        <div id="timerDisplay" style="display: none; color: white;"></div>
+                    </div>
+                </div>
+                <p id="flashMessage" class="flash" style="display: none;">Turn the device</p>
+                <p id="latexEquation">Total time = Initiation Static Interval + Turn Counts * T_wait</p>
+                <script>
+                    document.getElementById('latexEquation').innerHTML = '\\(\\text{Total time} = \\text{Initiation Static Interval} + \\text{Turn Counts} \\times T_{\\text{wait}}\\)';
+                    MathJax.typesetPromise(); // Render the LaTeX equation
+                </script>
+                <style>
+                    #latexEquation {
+                        font-size: 12px;
+                    }
+                </style>
+                <div class="input-group">
+                    <button id="startStopButton" onclick="toggleRecording()">Start Recording</button>
+                </div>
+                <div class="input-group" id="actionButtons" style="display: none;">
+                    <button id="backButton" onclick="goBack()">Back</button>
+                    <button id="plotButton" onclick="plotThis()">Plot This</button>
+                    <button id="calibrateButton" onclick="calibrate()">Calibrate</button>
+                </div>
+                <button type="button" onclick="getCalibratedData()">Get Calibrated Data</button>
+                <h3>Upload Calibration Files</h3>
+                <input type="file" id="accFileInput" accept=".calib">
+                <input type="file" id="gyroFileInput" accept=".calib">
+                <button type="button" onclick="uploadCalibrationFiles()">Upload Calibration Files</button>
+            </div>
+            <div class="serial-monitor">
+                <div class="plot-container" id="accelPlot"></div>
+                <div class="plot-container" id="gyroPlot"></div>
+                <div class="log" id="log">
+                    <!-- Serial log will appear here -->
+                </div>
+            </div>
+        </div>
+    </body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <!-- MathJax script for rendering LaTeX equations -->
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../static/js/theme.js"></script>
 
     <script>
         let isRecording = false;
@@ -690,16 +944,43 @@ function showMessage() {
 
             // Initial calculation of final time
             calculateFinalTime();
-            const accelLayout = {
-                title: 'Acceleration Data',
-                xaxis: { title: 'Time (Tio)' },
-                yaxis: { title: 'Acceleration' }
-            };
-            const gyroLayout = {
-                title: 'Gyroscope Data',
-                xaxis: { title: 'Time (Tio)' },
-                yaxis: { title: 'Gyroscope' }
-            };
+
+
+                // Dark theme settings for Plotly charts
+                const darkThemeLayout = {
+                    paper_bgcolor: '#1e1e1e', // Dark gray background
+                    plot_bgcolor: '#1e1e1e',  // Dark gray plot area
+                    font: {
+                        color: '#ffffff',   // White font color
+                    },
+                    xaxis: {
+                        gridcolor: '#444', // Grid color for x-axis
+                        zerolinecolor: '#444', // Zero line color for x-axis
+                        linecolor: '#444', // Line color for x-axis
+                        tickcolor: '#444', // Tick color for x-axis
+                    },
+                    yaxis: {
+                        gridcolor: '#444', // Grid color for y-axis
+                        zerolinecolor: '#444', // Zero line color for y-axis
+                        linecolor: '#444', // Line color for y-axis
+                        tickcolor: '#444', // Tick color for y-axis
+                    },
+                    };
+
+                    const accelLayout = {
+                        ...darkThemeLayout,
+                        title: 'Acceleration Data',
+                        xaxis: { title: 'Time (Tio)' },
+                        yaxis: { title: 'Acceleration' }
+                    };
+
+                    const gyroLayout = {
+                        ...darkThemeLayout,
+                        title: 'Gyroscope Data',
+                        xaxis: { title: 'Time (Tio)' },
+                        yaxis: { title: 'Gyroscope' }
+                    };
+
             Plotly.newPlot('accelPlot', [
                 { x: [], y: [], mode: 'lines', name: 'Accel X' },
                 { x: [], y: [], mode: 'lines', name: 'Accel Y' },
@@ -780,115 +1061,5 @@ function showMessage() {
 
     </script>
 </head>
-<body>
-    <div class="top-container">
-        <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
-        <h1>Serial Monitor</h1>
-    </div>
-    <div class="main-container">
-        <div class="side-container">
-            <div id="configSerial">
-                <h2>Select Serial Port</h2>
-                <form onsubmit="event.preventDefault(); openSerial();">
-                    <div class="input-group">
-                        <select id="port" name="port" required></select>
-                        <input type="number" id="baudrate" name="baudrate" placeholder="Baud Rate" value="115200" required>
 
-                    </div>
-
-                <!-- <label for="binaryCheckbox">Binary Mode</label>
-                    <input type="checkbox" id="binaryCheckbox" name="binaryCheckbox" checked> -->
-                    <button onclick="clearPlots()" type="submit">Open Serial Port</button>
-
-                </form>
-            </div>
-            <div class="input-group">
-                <label for="cycleCounterRange">Cycle Counter</label>
-                <input type="range" id="cycleCounterRange" name="cycleCounterRange" min="1" max="100" value="10">
-                <span id="cycleCounterValue">10</span>
-                <small>Set the number of cycles after which data is emitted</small>
-            </div>
-            
-            <div class="input-group">
-                <label for="batchSizeRange">Batch Size</label>
-                <input type="range" id="batchSizeRange" name="batchSizeRange" min="1" max="100" value="20">
-                <span id="batchSizeValue">20</span>
-                <small>Set the number of samples in each batch</small>
-            </div>
-
-            <div class="input-group">
-                <label for="sendingRate">Network Sending Rate</label>
-                <div id="sendingRate">20 ms</div>
-            </div>
-                        
-
-            <div>
-                <div class="input-group">
-                    <label for="recordingName" aria-placeholder="please enter the file name">File Name</label>
-                    <input type="text" id="recordingName" name="fileName" placeholder="please enter the file name" required>
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label for="initiationStaticInterval">Initiation Static Interval</label>
-                <input type="number" id="initiationStaticInterval" name="initiationStaticInterval" placeholder="50" value="50" required>
-                <small>Recommended: 50 seconds</small>
-            </div>
-            <div class="input-group">
-                <label for="turnCounts">Turn Counts</label>
-                <input type="number" id="turnCounts" name="turnCounts" placeholder="40" value="40" required>
-                <small>Recommended: 36 to 50 turns</small>
-            </div>
-            <div class="input-group">
-                <label for="T_wait">T_wait</label>
-                <input type="number" id="T_wait" name="T_wait" placeholder="4" value="4" required>
-                <small>Recommended: 1 to 4 seconds</small>
-            </div>
-            <div style="display: flex; flex-direction: row; gap: 60px;">
-                <p id="finalTimeDisplay">Final Time: 0 seconds</p>
-                <div id="timerDisplayContainer">
-                    <div id="timerDisplay" style="display: none; font-size: 20px; color: white; margin-top: 10px;"></div>
-                </div>               
-                <!-- <p id="timerDisplay" style="display: none; font-size: 20px; color: white; margin-top: 10px;"></p>     -->
-            </div>
-            <p id="flashMessage" class="flash" style="display: none;">Turn the device</p>
-
-            <!-- LaTeX formatted equation -->
-            <p id="latexEquation">Total time = Initiation Static Interval + Turn Counts * T_wait</p>
-            <script>
-                document.getElementById('latexEquation').innerHTML = '\\(\\text{Total time} = \\text{Initiation Static Interval} + \\text{Turn Counts} \\times T_{\\text{wait}}\\)';
-                MathJax.typesetPromise(); // Render the LaTeX equation
-            </script>
-            <style>
-                #latexEquation {
-                    font-size: 12px; /* Adjust this value as needed */
-                }
-            </style>
-            <div class="input-group">
-                <button id="startStopButton" onclick="toggleRecording()">Start Recording</button>
-            </div>
-            <div class="input-group" id="actionButtons" style="display: none;">
-                <button id="backButton" onclick="goBack()">Back</button>
-                <button id="plotButton" onclick="plotThis()">Plot This</button>
-                <button id="calibrateButton" onclick="calibrate()">Calibrate</button>
-            </div>
-            <button type="button" onclick="getCalibratedData()">Get Calibrated Data</button>
-
-            <h3>Upload Calibration Files</h3>
-            <input type="file" id="accFileInput" accept=".calib">
-            <input type="file" id="gyroFileInput" accept=".calib">
-            <button type="button" onclick="uploadCalibrationFiles()">Upload Calibration Files</button>
-        
-            
-            <!-- <button onclick="clearPlotAndStartRecording()">Start Recording</button> -->
-        </div>
-        <div class="serial-monitor">
-            <div class="plot-container" id="accelPlot"></div>
-            <div class="plot-container" id="gyroPlot"></div>
-            <div class="log" id="log">
-                <!-- Serial log will appear here -->
-            </div>
-        </div>
-    </div>
-</body>
 </html>

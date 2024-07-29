@@ -1,24 +1,47 @@
+:root {
+    --background-color-dark: #121212;
+    --background-color-light: rgba(240, 240, 240, 0.9); /* Transparent light gray */
+    --container-background-dark: rgba(255, 255, 255, 0.1);
+    --container-background-light: rgba(0, 0, 0, 0.1);
+    --text-color-dark: #ffffff;
+    --text-color-light: #000000;
+    --button-background-dark: linear-gradient(90deg, #004d00, #00b300);
+    --button-background-light: linear-gradient(90deg, #d3d3d3, #ffffff);
+    --input-background-dark: #333;
+    --input-background-light: #f0f0f0;
+    --input-border-dark: #333;
+    --input-border-light: #ccc;
+    --scrollbar-track-dark: #1e1e1e;
+    --scrollbar-track-light: #ccc;
+    --scrollbar-thumb-dark: #333;
+    --scrollbar-thumb-light: #999;
+    --button-hover-border-light: #a9a9a9;
+}
+
 body {
     font-family: Arial, sans-serif;
-    background-color: #121212;
+    background-color: var(--background-color-dark);
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
+    color: var(--text-color-dark);
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .container {
     text-align: center;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--container-background-dark);
     backdrop-filter: blur(10px);
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: background 0.3s;
 }
 
 h1 {
-    color: #ffffff;
+    color: var(--text-color-dark);
     margin-bottom: 20px;
 }
 
@@ -28,7 +51,7 @@ h1 {
 }
 
 button {
-    background: linear-gradient(90deg, #004d00, #00b300);
+    background: var(--button-background-dark);
     color: white;
     padding: 15px 20px;
     margin: 10px 0;
@@ -36,7 +59,7 @@ button {
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    transition: background 0.3s;
+    transition: background 0.3s, border 0.3s;
 }
 
 button:hover {
@@ -44,20 +67,92 @@ button:hover {
 }
 
 label {
-    color: #ffffff;
+    color: var(--text-color-dark);
 }
 
 select, input[type="number"] {
     padding: 10px;
     border-radius: 5px;
-    border: 1px solid #333;
+    border: 1px solid var(--input-border-dark);
     margin-bottom: 20px;
-    background-color: #333;
-    color: white;
+    background-color: var(--input-background-dark);
+    color: var(--text-color-dark);
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
 }
 
 form {
     display: flex;
     flex-direction: column;
     align-items: center;
+}
+
+/* For WebKit browsers */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-dark); /* Dark gray */
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-dark); /* Black */
+    border-radius: 10px;
+    border: 3px solid var(--scrollbar-track-dark); /* Dark gray border */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555; /* Lighter black for hover effect */
+}
+
+/* For Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-dark) var(--scrollbar-track-dark); /* Thumb color, track color */
+}
+
+/* Light Theme Overrides */
+body.light-theme {
+    background-color: var(--background-color-light);
+    color: var(--text-color-light);
+}
+
+body.light-theme .container {
+    background: var(--container-background-light);
+}
+
+body.light-theme h1,
+body.light-theme label {
+    color: var(--text-color-light);
+}
+
+body.light-theme button {
+    background: var(--button-background-light);
+    color: var(--text-color-light);
+}
+
+body.light-theme button:hover {
+    background: linear-gradient(90deg, #ffffff, #d3d3d3);
+    border: 2px solid var(--button-hover-border-light); /* Add hover border for light mode */
+}
+
+body.light-theme select,
+body.light-theme input[type="number"] {
+    background-color: var(--input-background-light);
+    border-color: var(--input-border-light);
+    color: var(--text-color-light);
+}
+
+body.light-theme ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track-light);
+}
+
+body.light-theme ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb-light);
+    border: 3px solid var(--scrollbar-track-light);
+}
+
+body.light-theme * {
+    scrollbar-color: var(--scrollbar-thumb-light) var(--scrollbar-track-light); /* Thumb color, track color */
 }
