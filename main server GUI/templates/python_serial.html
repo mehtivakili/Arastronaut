@@ -239,6 +239,57 @@
             left: 0;
             z-index: -1;
         }
+        .input-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .input-group {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .input-group label {
+        margin-bottom: 5px;
+    }
+
+    .input-group input {
+        width: 100%;
+    }
+
+    .info-icon {
+        cursor: pointer;
+        font-size: 16px;
+        margin-left: 5px;
+    }
+
+    .info-icon::after {
+        content: attr(title);
+        position: absolute;
+        bottom: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 5px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s, visibility 0.3s;
+        font-size: 12px;
+        z-index: 10;
+    }
+
+    .info-icon:hover::after {
+        opacity: 1;
+        visibility: visible;
+    }
+
     </style>
     
     <body>
@@ -363,7 +414,7 @@
         </div>
         <div class="main-container">
             <div class="side-container">
-                <button class="theme-toggle-button" onclick="toggleTheme()">Toggle Theme</button>
+                <button class="theme-toggle-button" style="display: none;" onclick="toggleTheme()">Toggle Theme</button>
 
                 <div id="configSerial">
                     <h2>Select Serial Port</h2>
@@ -393,25 +444,28 @@
                     <label for="sendingRate">Network Sending Rate</label>
                     <div id="sendingRate">200 ms</div>
                 </div>
-                <div class="input-group">
+                <div class="input-group" style="display: none;">
                     <label for="recordingName">File Name</label>
-                    <input type="text" id="recordingName" name="fileName" placeholder="please enter the file name" required>
+                    <input type="text" id="recordingName" name="fileName" placeholder="please enter the file name" value="test">
                 </div>
-                <div class="input-group">
-                    <label for="initiationStaticInterval">Initiation Static Interval</label>
-                    <input type="number" id="initiationStaticInterval" name="initiationStaticInterval" placeholder="50" value="50" required>
-                    <small>Recommended: 50 seconds</small>
+                <div class="input-row" id="recordParams">
+                    <div class="input-group">
+                        <label for="initiationStaticInterval">Init Static T</label>
+                        <input type="number" id="initiationStaticInterval" name="initiationStaticInterval" placeholder="50" value="50" required>
+                        <span class="info-icon" title="Recommended: 50 seconds">ℹ️</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="turnCounts">Turn Counts</label>
+                        <input type="number" id="turnCounts" name="turnCounts" placeholder="40" value="40" required>
+                        <span class="info-icon" title="Recommended: 36 to 50 turns">ℹ️</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="T_wait">T_wait</label>
+                        <input type="number" id="T_wait" name="T_wait" placeholder="4" value="4" required>
+                        <span class="info-icon" title="Recommended: 1 to 4 seconds">ℹ️</span>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="turnCounts">Turn Counts</label>
-                    <input type="number" id="turnCounts" name="turnCounts" placeholder="40" value="40" required>
-                    <small>Recommended: 36 to 50 turns</small>
-                </div>
-                <div class="input-group">
-                    <label for="T_wait">T_wait</label>
-                    <input type="number" id="T_wait" name="T_wait" placeholder="4" value="4" required>
-                    <small>Recommended: 1 to 4 seconds</small>
-                </div>
+                
                 <div style="display: flex; flex-direction: row; gap: 10px;">
                     <p id="finalTimeDisplay">Final Time: 0 seconds</p>
                     <div id="timerDisplayContainer">
@@ -432,7 +486,7 @@
                 <div class="input-group">
                     <button id="startStopButton" onclick="toggleRecording()">Start Recording</button>
                 </div>
-                <div class="input-group" id="actionButtons" style="display: none;">
+                <div class="input-row" id="actionButtons" style="display: none;">
                     <button id="backButton" onclick="goBack()">Back</button>
                     <button id="plotButton" onclick="plotThis()">Plot This</button>
                     <button id="calibrateButton" onclick="calibrate()">Calibrate</button>
@@ -656,6 +710,9 @@ function resetToStartRecordingState() {
 
     const actionButtons = document.getElementById('actionButtons');
     actionButtons.style.display = 'none';
+
+    const recordParams = document.getElementById('recordParams');
+    recordParams.style.display = "flex";
     
 }
 
@@ -666,6 +723,9 @@ function showActionButtons() {
 
     const actionButtons = document.getElementById('actionButtons');
     actionButtons.style.display = 'flex';
+
+    const recordParams = document.getElementById('recordParams');
+    recordParams.style.display = 'none';
 }
 
 // function showMessage(message) {
