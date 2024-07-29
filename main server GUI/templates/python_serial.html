@@ -33,7 +33,7 @@
         }
         .back-button {
             position: absolute;
-            left: 20px;
+            left: 30px;
             background: linear-gradient(90deg, #004d00, #00b300);
             color: white;
             padding: 10px 20px;
@@ -43,6 +43,7 @@
             transition: background 0.3s;
             text-align: center;
             font-size: 16px;
+            width: auto;
         }
         .back-button:hover {
             background: linear-gradient(90deg, #00b300, #004d00);
@@ -52,7 +53,7 @@
             flex-grow: 1;
             width: 100%;
             display: flex;
-            padding-top: 20px;
+            padding-top: 10px;
             overflow: hidden;
         }
         .side-container {
@@ -65,13 +66,13 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            max-height: calc(100vh - 60px); /* Ensure the side container fits within the viewport */
+            max-height: 100%; /* Ensure the side container fits within the viewport */
         }
         .serial-monitor {
             width: 70%;
             height: calc(100vh - 60px);
             overflow: auto;
-            background-color: #1e1e1e;
+            background-color:  rgba(30, 30, 30, 0.8);
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             margin-left: 20px;
@@ -285,10 +286,111 @@
         z-index: 10;
     }
 
-    .info-icon:hover::after {
-        opacity: 1;
-        visibility: visible;
+            .info-icon:hover::after {
+                opacity: 1;
+                visibility: visible;
+            }
+
+.collapsible-section {
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #004d00;
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.collapsible-header:hover {
+    background-color: #00b300;
+}
+
+.collapsible-header h2 {
+    margin: 0;
+    font-size: 16px; /* Adjust the font size for better responsiveness */
+}
+
+.collapsible-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 14px; /* Adjust the font size for better responsiveness */
+    cursor: pointer;
+    padding: 10px;
+    text-align: center;
+    width: 100%;
+    background-color: #004d00;
+    transition: background-color 0.3s;
+}
+
+.collapsible-toggle:hover {
+    background-color: #00b300;
+}
+
+.collapsible-content {
+    display: none;
+    padding: 10px;
+    animation: slideDown 0.3s ease-in-out forwards;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease, opacity 0.5s ease;
+}
+
+body.light-theme .collapsible-header {
+    background-color: #d3d3d3;
+    color: black;
+}
+
+body.light-theme .collapsible-header:hover {
+    background-color: #a9a9a9;
+}
+
+body.light-theme .collapsible-toggle {
+    background-color: #d3d3d3;
+    color: black;
+}
+
+body.light-theme .collapsible-toggle:hover {
+    background-color: #a9a9a9;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
     }
+    to {
+        opacity: 1;
+        max-height: 500px; /* Adjust based on your content's height */
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        max-height: 500px; /* Adjust based on your content's height */
+    }
+    to {
+        opacity: 0;
+        max-height: 0;
+    }
+}
+
+.collapsible-content.show {
+    max-height: 1000px; /* Ensure this is sufficient to fit the content */
+    padding: 10px;
+    overflow: visible;
+}
+
+
 
     </style>
     
@@ -410,7 +512,7 @@
         
         <div class="top-container">
             <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
-            <h1>Serial Monitor</h1>
+            <h1>IMU Calibration</h1>
         </div>
         <div class="main-container">
             <div class="side-container">
@@ -427,23 +529,34 @@
                     </form>
                 </div>
 
-                <div class="input-group">
-                    <label for="cycleCounterRange">Cycle Counter</label>
-                    <input type="range" id="cycleCounterRange" name="cycleCounterRange" min="1" max="100" value="10">
-                    <span id="cycleCounterValue">10</span>
-                    <small>Set the number of cycles after which data is emitted</small>
-                </div>
-                <div class="input-group">
-                    <label for="batchSizeRange">Batch Size</label>
-                    <input type="range" id="batchSizeRange" name="batchSizeRange" min="1" max="100" value="20">
-                    <span id="batchSizeValue">20</span>
-                    <small>Set the number of samples in each batch</small>
-                </div>
-
-                <div class="input-group">
-                    <label for="sendingRate">Network Sending Rate</label>
-                    <div id="sendingRate">200 ms</div>
-                </div>
+                
+                <!-- <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)"> -->
+                        <h3>Plot Controller</h3>
+                    <!-- </div>
+                    <div class="collapsible-content"> -->
+                        <div class="input-group">
+                            <label for="cycleCounterRange">Cycle Counter</label>
+                            <input type="range" id="cycleCounterRange" name="cycleCounterRange" min="1" max="100" value="10">
+                            <span id="cycleCounterValue">10</span>
+                            <small>Set the number of cycles after which data is emitted</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="batchSizeRange">Batch Size</label>
+                            <input type="range" id="batchSizeRange" name="batchSizeRange" min="1" max="100" value="20">
+                            <span id="batchSizeValue">20</span>
+                            <small>Set the number of samples in each batch</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="sendingRate">Network Sending Rate</label>
+                            <div id="sendingRate">200 ms</div>
+                        </div>
+                        <!-- <button class="collapsible-toggle" onclick="toggleCollapsible(this.parentElement)">▲ Collapse</button>
+                    </div>
+                </div> -->
+    
+                
+                                
                 <div class="input-group" style="display: none;">
                     <label for="recordingName">File Name</label>
                     <input type="text" id="recordingName" name="fileName" placeholder="please enter the file name" value="test">
@@ -496,6 +609,8 @@
                 <input type="file" id="accFileInput" accept=".calib">
                 <input type="file" id="gyroFileInput" accept=".calib">
                 <button type="button" onclick="uploadCalibrationFiles()">Upload Calibration Files</button>
+
+                
             </div>
             <div class="serial-monitor">
                 <div class="plot-container" id="accelPlot"></div>
@@ -597,6 +712,21 @@
                 x: [[]],
                 y: [[], [], []]
             });
+        }
+
+        function toggleCollapsible(header) {
+            const content = header.nextElementSibling;
+            const toggleButton = header.querySelector('.collapsible-toggle');
+
+            if (content.style.display === "block") {
+                content.style.display = "none";
+                toggleButton.textContent = "▼";
+                content.style.animation = "slideUp 0.3s ease-in-out forwards";
+            } else {
+                content.style.display = "block";
+                toggleButton.textContent = "▲";
+                content.style.animation = "slideDown 0.3s ease-in-out forwards";
+            }
         }
 
         function generateDefaultRecordingName() {
@@ -1008,8 +1138,8 @@ function showMessage() {
 
                 // Dark theme settings for Plotly charts
                 const darkThemeLayout = {
-                    paper_bgcolor: '#1e1e1e', // Dark gray background
-                    plot_bgcolor: '#1e1e1e',  // Dark gray plot area
+                    paper_bgcolor: 'rgba(30, 30, 30, 0)', // Dark gray background
+                    plot_bgcolor: 'rgba(30, 30, 30, 0)',  // Dark gray plot area
                     font: {
                         color: '#ffffff',   // White font color
                     },
