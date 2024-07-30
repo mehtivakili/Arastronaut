@@ -1,0 +1,10 @@
+Removed Pin From Net: NetName=GND Pin=J2-4
+Removed Pin From Net: NetName=GND Pin=J3-3
+Removed Pin From Net: NetName=GND Pin=J3-4
+Added Pin To Net: NetName=SCK_UWB Pin=U3-8
+Added Pin To Net: NetName=MOSI_UWB Pin=U3-9
+Added Pin To Net: NetName=MISO_UWB Pin=U3-10
+Added Pin To Net: NetName=MISO_UWB Pin=U3-15
+Added Rule: Name=Schematic Supply Nets
+Added Rule: Name=Schematic Supply Nets_1
+Added Rule: Name=Schematic Supply Nets_2
