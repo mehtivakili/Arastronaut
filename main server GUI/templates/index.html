@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="../static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Helvetica:wght@400;700&display=swap" rel="stylesheet">
+
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
     <script src="../static/js/theme.js"></script>
@@ -10,6 +13,11 @@
     <title>Home - Firmware Flasher</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
+        body {
+            font-family: 'Helvetica', sans-serif !important;
+        }
+
+
         .network-info {
             position: absolute;
             top: 10px;
@@ -38,6 +46,7 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             transition: background-color 0.3s, box-shadow 0.3s;
             margin: 10px;
+            width: 200px;
         }
 
         .theme-toggle-button:hover {
@@ -73,10 +82,10 @@
             <button onclick="window.location.href='/calibration'">Calibration</button>
             <button onclick="location.href='/data_acquisition'">Data Acquisition</button>
             <form action="/python_serial" method="post">
-                <button type="submit">Python Serial Monitor</button>
+                <button type="submit" class="same-size">Python Serial Monitor</button>
             </form>
             <form action="/python_UDP" method="post">
-                <button type="submit">Python UDP</button>
+                <button type="submit" class="same-size">Python UDP</button>
             </form>
 
         </div>
