@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiUdp.h>
 #include <WebServer.h>
 #include "BMI088.h"
 
@@ -8,12 +9,17 @@ Bmi088Gyro gyro(SPI, 25);
 int16_t accelX_raw, accelY_raw, accelZ_raw;
 int16_t gyroX_raw, gyroY_raw, gyroZ_raw;
 
-
 double Tio = 0.0;
 
-String formatFloat(float value) {
-  return String(value, 3);
-}
+const char* ssid = "ESP32_AP";
+const char* password = "123456789";
+const char* udpAddress = "192.168.4.2";  // The IP address of the Python client
+const int udpPort = 12345;  // The port to send data to
+
+WiFiUDP udp;
+WebServer server(80);
+
+bool sendData = false;
 
 double myArray[7];
 typedef union {
@@ -21,13 +27,7 @@ typedef union {
   byte binary[4];
 } binaryFloat;
 
-const char* ssid = "ESP32_AP";
-const char* password = "123456789";
-
-WebServer server(80);
-
-bool sendData = false;
-
+const char* check = "abc/";
 
 void handleStart() {
   sendData = true;
@@ -40,9 +40,8 @@ void handleStop() {
 }
 
 void sendIMUData() {
-  
-  float tio_millis =static_cast<float>(millis());
-  Tio = tio_millis/1000.0;
+  float tio_millis = static_cast<float>(millis());
+  Tio = tio_millis / 1000.0;
   myArray[0] = Tio;
   myArray[1] = accelX_raw;
   myArray[2] = accelY_raw;
@@ -51,20 +50,24 @@ void sendIMUData() {
   myArray[5] = gyroY_raw;
   myArray[6] = gyroZ_raw;
 
-   size_t size = sizeof(myArray);
+  udp.beginPacket(udpAddress, udpPort);
 
-  const char* check = "abc/";
-  Serial.write(check, 4);
+  udp.write((const uint8_t*)check, strlen(check));  // Write the check variable
 
-  for(int i = 0; i < 7 ; i++){
+  for (int i = 0; i < 7; i++) {
     binaryFloat hi;
     hi.floatingPoint = myArray[i];
-    Serial.write(hi.binary,4);
+    udp.write(hi.binary, 4);
   }
-  
+
+  int result = udp.endPacket();
+  if (result == 1) {
+    Serial.println("Packet sent successfully");
+  } else {
+    Serial.print("Error sending packet: ");
+    Serial.println(result);
+  }
 }
-
-
 
 void setup() {
   Serial.begin(115200);
@@ -98,3 +101,4 @@ void loop() {
     delay(5);
   }
 }
+

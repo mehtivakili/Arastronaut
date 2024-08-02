@@ -39,7 +39,21 @@ message_queue = queue.Queue()
 CORS(app)
 
 ESP32_IP = "192.168.4.1"  # IP address of the ESP32
+UDP_IP = "192.168.4.2"  # IP address to bind the UDP socket
+UDP_PORT = 12345  # Port to bind the UDP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind((UDP_IP, UDP_PORT))
+# Function to handle incoming UDP packets
+def udp_listener():
+    while True:
+        data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
+        values = struct.unpack('<7f', data)
+        Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = values
+        print(f"Tio: {Tio}, Accel: ({accelX}, {accelY}, {accelZ}), Gyro: ({gyroX}, {gyroY}, {gyroZ})")
 
+# Start the UDP listener in a separate thread
+udp_thread = threading.Thread(target=udp_listener)
+udp_thread.start()
 
 cycle_counter_limit = 2
 batch_size = 10
