@@ -11,15 +11,21 @@ int16_t gyroX_raw, gyroY_raw, gyroZ_raw;
 
 double Tio = 0.0;
 
-const char* ssid = "ESP32_AP";
-const char* password = "123456789";
-const char* udpAddress = "192.168.4.2";  // The IP address of the Python client
+// Replace with your network credentials
+const char* sta_ssid = "D-Link";
+const char* sta_password = "09124151339";
+
+const char* ap_ssid = "ESP32_AP";
+const char* ap_password = "123456789";
+const char* udpAddress = "192.168.4.2";  // The IP address of the Python client (update this to match your PC's IP)
 const int udpPort = 12345;  // The port to send data to
 
 WiFiUDP udp;
 WebServer server(80);
 
 bool sendData = false;
+int batchSize = 1;  // Default batch size
+int currentBatchCount = 0;
 
 double myArray[7];
 typedef union {
@@ -28,6 +34,7 @@ typedef union {
 } binaryFloat;
 
 const char* check = "abc/";
+std::vector<uint8_t> batchData;
 
 void handleStart() {
   sendData = true;
@@ -37,6 +44,15 @@ void handleStart() {
 void handleStop() {
   sendData = false;
   server.send(200, "text/plain", "Data transmission stopped");
+}
+
+void handleSetBatch() {
+  if (server.hasArg("batch")) {
+    batchSize = server.arg("batch").toInt();
+    server.send(200, "text/plain", "Batch size set to " + String(batchSize));
+  } else {
+    server.send(400, "text/plain", "Batch size not specified");
+  }
 }
 
 void sendIMUData() {
@@ -50,22 +66,30 @@ void sendIMUData() {
   myArray[5] = gyroY_raw;
   myArray[6] = gyroZ_raw;
 
-  udp.beginPacket(udpAddress, udpPort);
-
-  udp.write((const uint8_t*)check, strlen(check));  // Write the check variable
+  // Append check string to batch data
+  batchData.insert(batchData.end(), check, check + strlen(check));
 
   for (int i = 0; i < 7; i++) {
     binaryFloat hi;
     hi.floatingPoint = myArray[i];
-    udp.write(hi.binary, 4);
+    batchData.insert(batchData.end(), hi.binary, hi.binary + 4);
   }
 
-  int result = udp.endPacket();
-  if (result == 1) {
-    Serial.println("Packet sent successfully");
-  } else {
-    Serial.print("Error sending packet: ");
-    Serial.println(result);
+  currentBatchCount++;
+
+  if (currentBatchCount >= batchSize) {
+    udp.beginPacket(udpAddress, udpPort);
+    udp.write(batchData.data(), batchData.size());
+    int result = udp.endPacket();
+    if (result == 1) {
+      Serial.println("Batch sent successfully");
+    } else {
+      Serial.print("Error sending batch: ");
+      Serial.println(result);
+    }
+
+    batchData.clear();  // Clear the batch data
+    currentBatchCount = 0;  // Reset the batch count
   }
 }
 
@@ -78,10 +102,33 @@ void setup() {
     while (1);
   }
 
-  WiFi.softAP(ssid, password, 1, 0);
+  // Connect to Wi-Fi network in station mode (STA)
+  WiFi.begin(sta_ssid, sta_password);
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(sta_ssid);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
+
+  Serial.println("\nConnected to WiFi");
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  // Set up access point (AP) mode
+  WiFi.softAP(ap_ssid, ap_password);
+  IPAddress AP_IP = WiFi.softAPIP();
+  Serial.print("AP SSID: ");
+  Serial.println(ap_ssid);
+  Serial.print("AP IP address: ");
+  Serial.println(AP_IP);
 
   server.on("/start", handleStart);
   server.on("/stop", handleStop);
+  server.on("/setBatch", handleSetBatch);
   server.begin();
 
   Serial.println("HTTP server started");
@@ -101,4 +148,3 @@ void loop() {
     delay(5);
   }
 }
-
