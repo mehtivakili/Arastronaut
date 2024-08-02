@@ -18,7 +18,7 @@ const char* sta_password = "09124151339";
 const char* ap_ssid = "ESP32_AP";
 const char* ap_password = "123456789";
 const char* udpAddress = "192.168.4.2";  // The IP address of the Python client (update this to match your PC's IP)
-const int udpPort = 12345;  // The port to send data to
+const int udpPort = 12346;  // The port to send data to
 
 WiFiUDP udp;
 WebServer server(80);

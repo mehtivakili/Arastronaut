@@ -3,7 +3,7 @@ import struct
 
 # Configuration for the UDP receiver
 UDP_IP = "0.0.0.0"  # Listen on all available interfaces
-UDP_PORT = 12345  # Port to listen on (must match the ESP32 udpPort)
+UDP_PORT = 12346  # Port to listen on (must match the ESP32 udpPort)
 
 # Create a UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

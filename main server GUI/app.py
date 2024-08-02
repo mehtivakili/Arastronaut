@@ -39,24 +39,21 @@ message_queue = queue.Queue()
 CORS(app)
 
 ESP32_IP = "192.168.4.1"  # IP address of the ESP32
-UDP_IP = "192.168.4.2"  # IP address to bind the UDP socket
-UDP_PORT = 12345  # Port to bind the UDP socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((UDP_IP, UDP_PORT))
-# Function to handle incoming UDP packets
-def udp_listener():
-    while True:
-        data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
-        values = struct.unpack('<7f', data)
-        Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = values
-        print(f"Tio: {Tio}, Accel: ({accelX}, {accelY}, {accelZ}), Gyro: ({gyroX}, {gyroY}, {gyroZ})")
+UDP_IP = "0.0.0.0"  # Listen on all available interfaces
+UDP_PORT = 12346  # Port to bind the UDP socket
+global sock
 
-# Start the UDP listener in a separate thread
-udp_thread = threading.Thread(target=udp_listener)
-udp_thread.start()
+# sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
+
+# sock.bind((UDP_IP, UDP_PORT))
+
+# # Start the UDP listener in a separate thread
+# udp_thread = threading.Thread(target=udp_listener)
+# udp_thread.start()
 
 cycle_counter_limit = 2
-batch_size = 10
+batch_size = 1
 
 # Calibration parameters
 calibration_enabled = False
@@ -210,6 +207,17 @@ def python_serial():
         network_info = get_network_info()
         return render_template('python_serial.html', network_info=network_info)
 
+@app.route('/python_UDP', methods=['GET', 'POST'])
+def python_UDP():
+    if request.method == 'POST':
+            # Start the UDP thread
+            serial_thread = threading.Thread(target=read_serial_data)
+            serial_thread.start()
+            print("UDP thread started")
+ 
+            network_info = get_network_info()
+            return render_template('python_UDP.html', network_info=network_info)
+
 @app.route('/get_ports', methods=['GET'])
 def get_ports():
     ports = list(serial.tools.list_ports.comports())
@@ -285,7 +293,8 @@ def calculate_checksum(data):
 offset = 0
 from datetime import datetime
 
-def read_serial_data(true):
+def read_serial_data():
+    print("read_serial_data started")
     global serial_running
     global last_Tio 
     global packets_count
@@ -300,7 +309,8 @@ def read_serial_data(true):
     global numbers
     global batch_size
     global cycle_counter_limit
-
+    # global sock
+    numbers = []
     # offset = 0  # Set this to your required offset
     last_Tio = 0
     # Timer = 10000
@@ -334,97 +344,109 @@ def read_serial_data(true):
     check_length = len(check_encoded)
 
     buffer = bytearray()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
 
-    while serial_running:
-        if serial_port.in_waiting > 0:
-            buffer.extend(serial_port.read(serial_port.in_waiting))
+    sock.bind((UDP_IP, UDP_PORT))
+    # while serial_running:
+    #     if serial_port.in_waiting > 0:
+   
+ #         buffer.extend(serial_port.read(serial_port.in_waiting))
+    print("why the ..")
+    while True:
+        data, addr = sock.recvfrom(4096)
+        buffer.extend(data)
+        # print(f"Buffer length: {len(buffer)}")
 
-            while True:
-                separator_index = buffer.find(check_encoded)
-                if separator_index == -1:
-                    break
+        while len(buffer) >= 32:  # 4 bytes for the "abc/" and 28 bytes for the packet
+            start_index = buffer.find(check_encoded)
+            if start_index == -1:
+                break  # "abc/" not found, wait for more data
+
+            end_index = start_index + len(check_encoded) + 28
+            if end_index > len(buffer):
+                break  # Not enough data for a full packet, wait for more data
+
+            part = buffer[start_index + len(check_encoded):end_index]
+            buffer = buffer[end_index:]  # Remove the processed part from the buffer
+
+            if len(part) == 28:   
+
+                numbers = struct.unpack('<7f', part)
+                Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
+                print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
                 
-                # Check if we have a full packet after the separator
-                if len(buffer) >= separator_index + check_length + 28:
-                    # Extract the packet
-                    packet_start = separator_index + check_length
-                    packet_end = packet_start + 28
-                    data = buffer[packet_start:packet_end]
-                    
-                    if len(data) == 28:
-                        numbers = struct.unpack('<7f', data)  # Unpack the 7 floats
-                        if not set_offset:
-                            offset = numbers[0]
-                            set_offset = True
-                        
-                        # Extract data
-                        Tio = numbers[0] - offset
-                        accel = numbers[1:4]
-                        gyro = numbers[4:7]
-                        # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
-                        if calibration_enabled:
-                            accel, gyro = apply_calibration(accel, gyro)
+                if not set_offset:
+                    offset = numbers[0]
+                    set_offset = True
+                
+                # Extract data
+                Tio = numbers[0] - offset
+                accel = numbers[1:4]
+                gyro = numbers[4:7]
+                # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
+                if calibration_enabled:
+                    accel, gyro = apply_calibration(accel, gyro)
 
-                        # Initialize the first Tio and current second start
-                        if last_Tio is None:
-                            last_Tio = Tio
-                            current_second_start = int(Tio)
+                # Initialize the first Tio and current second start
+                if last_Tio is None:
+                    last_Tio = Tio
+                    current_second_start = int(Tio)
 
-                        # Increment the cycle counter
-                        cycle_counter += 1
+                # Increment the cycle counter
+                cycle_counter += 1
 
-                        # Emit data every 20 cycles
-                        if cycle_counter >= cycle_counter_limit:
-                            # Append data to batch
-                            batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
-                            if len(batch_data) >= batch_size:
-                                # Emit the batch of data
-                                sio_client.emit('sensor_data', batch_data)
-                                # Reset the batch data
-                                batch_data = []
-                            # Reset the cycle counter
-                            cycle_counter = 0
+                # Emit data every 20 cycles
+                if cycle_counter >= cycle_counter_limit:
+                    # Append data to batch
+                    batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                    if len(batch_data) >= batch_size:
+                        # Emit the batch of data
+                        sio_client.emit('sensor_data', batch_data)
+                        # Reset the batch data
+                        batch_data = []
+                    # Reset the cycle counter
+                    cycle_counter = 0
 
-                        # Check for Tio change and calculate rate
-                        if int(Tio) != current_second_start:
-                            # Print the rate for the last second
-                            print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
+                # Check for Tio change and calculate rate
+                if int(Tio) != current_second_start:
+                    # Print the rate for the last second
+                    print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
 
-                            # Reset the packet count for the new second
-                            packets_count = 0
-                            current_second_start = int(Tio)
+                    # Reset the packet count for the new second
+                    packets_count = 0
+                    current_second_start = int(Tio)
 
-                        # Increment the packet count for the current second
-                        packets_count += 1
-                        last_Tio = Tio
+                # Increment the packet count for the current second
+                packets_count += 1
+                last_Tio = Tio
+                if Timer != 0:
+                    if start_time != 0:
+                        end_time = time.time()
+                        if (end_time - start_time < Timer):
+                            formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                            formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
 
-                        if Timer != 0:
-                            if start_time != 0:
-                                end_time = time.time()
-                                if (end_time - start_time < Timer):
-                                    formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                                    formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
-
-                                    with open(acc_filename, mode='a', newline='') as acc_file:
-                                        acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                        acc_writer.writerow(formatted_accel)
-                                    with open(gyro_filename, mode='a', newline='') as gyro_file:
-                                        gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                        gyro_writer.writerow(formatted_gyro)
-                                else:
-                                    if createdFlag:
-                                        print(f"{acc_filename} and {gyro_filename} are created.")
-                                        createdFlag = False
-                            else:
-                                start_time = time.time()
-
-                        # Remove the processed packet and the separator from the buffer
-                        buffer = buffer[packet_end:]
+                            with open(acc_filename, mode='a', newline='') as acc_file:
+                                acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                acc_writer.writerow(formatted_accel)
+                            with open(gyro_filename, mode='a', newline='') as gyro_file:
+                                gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                gyro_writer.writerow(formatted_gyro)
+                        else:
+                            if createdFlag:
+                                print(f"{acc_filename} and {gyro_filename} are created.")
+                                createdFlag = False
                     else:
-                        print(f"Expected 28 bytes but received {len(data)} bytes.")
-                        break
-                else:
-                    break
+                        start_time = time.time()
+
+                # Remove the processed packet and the separator from the buffer
+                # buffer = buffer[packet_end:]
+            else:
+                print(f"Expected 28 bytes but received {len(parts)} bytes.")
+                break
+    # else:
+        # break
 
 Timer = 0
 
