@@ -529,12 +529,31 @@ body.light-theme .collapsible-toggle:hover {
                     </form>
                 </div>
 
-                
+                <h1>ESP32 IMU Data Control</h1>
+                <button onclick="startData()">Start Data Transmission</button>
+                <button onclick="stopData()">Stop Data Transmission</button>
+
+                <script>
+                    function startData() {
+                        fetch('/start')
+                            .then(response => response.json())
+                            .then(data => alert(data.status))
+                            .catch(error => console.error('Error:', error));
+                    }
+
+                    function stopData() {
+                        fetch('/stop')
+                            .then(response => response.json())
+                            .then(data => alert(data.status))
+                            .catch(error => console.error('Error:', error));
+                    }
+                </script>
                 <!-- <div class="collapsible-section">
                     <div class="collapsible-header" onclick="toggleCollapsible(this)"> -->
                         <h3>Plot Controller</h3>
                     <!-- </div>
                     <div class="collapsible-content"> -->
+
                         <div class="input-group">
                             <label for="cycleCounterRange">Cycle Counter</label>
                             <input type="range" id="cycleCounterRange" name="cycleCounterRange" min="1" max="100" value="10">

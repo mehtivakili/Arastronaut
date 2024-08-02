@@ -38,6 +38,9 @@ message_queue = queue.Queue()
 
 CORS(app)
 
+ESP32_IP = "192.168.4.1"  # IP address of the ESP32
+
+
 cycle_counter_limit = 2
 batch_size = 10
 
@@ -105,6 +108,23 @@ def get_connected_ssid():
 def index():
     network_info = get_network_info()
     return render_template('index.html', network_info=network_info)
+
+@app.route('/start')
+def start():
+    try:
+        response = requests.get(f'http://{ESP32_IP}/start')
+        return jsonify({"status": response.text})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/stop')
+def stop():
+    try:
+        response = requests.get(f'http://{ESP32_IP}/stop')
+        return jsonify({"status": response.text})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
 
 @app.route('/firmware')
 def firmware():
