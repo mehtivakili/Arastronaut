@@ -2,6 +2,8 @@
 #include <WiFiUdp.h>
 #include <WebServer.h>
 #include "BMI088.h"
+#include "DW1000.h"
+#include "DW1000Ranging.h"
 
 Bmi088Accel accel(SPI, 32);
 Bmi088Gyro gyro(SPI, 25);
@@ -27,6 +29,13 @@ bool sendData = false;
 int batchSize = 1;  // Default batch size
 int currentBatchCount = 0;
 
+bool calibration_in_progress = false;
+
+bool imuDataReady = false;
+bool uwbDataReady = false;
+std::vector<uint8_t> combinedData;
+
+
 enum Mode {
   IMU_ONLY = 0,
   UWB_CALIBRATION = 1,
@@ -35,6 +44,10 @@ enum Mode {
 };
 
 Mode currentMode = IMU_ONLY;
+
+const char* IMU_SEPARATOR = "abc/";
+const char* UWB_SEPARATOR = "cba/";
+
 
 double myArray[7];
 typedef union {
@@ -106,31 +119,85 @@ void sendIMUData() {
   myArray[6] = gyroZ_raw;
 
   // Append check string to batch data
-  batchData.insert(batchData.end(), check, check + strlen(check));
+  // Clear the batch data and add the IMU header
+  combinedData.clear();
+  combinedData.insert(combinedData.end(), IMU_SEPARATOR, IMU_SEPARATOR + strlen(IMU_SEPARATOR));
 
   for (int i = 0; i < 7; i++) {
     binaryFloat hi;
     hi.floatingPoint = myArray[i];
-    batchData.insert(batchData.end(), hi.binary, hi.binary + 4);
+    // batchData.insert(batchData.end(), hi.binary, hi.binary + 4);
+    combinedData.insert(combinedData.end(), hi.binary, hi.binary + 4);
+  
+  }
+  // Send the IMU data immediately
+  udp.beginPacket(udpAddress, udpPort);
+  udp.write(batchData.data(), batchData.size());
+  int result = udp.endPacket();
+  if (result == 1) {
+    Serial.println("IMU data sent successfully");
+  } else {
+    Serial.print("Error sending IMU data: ");
+    Serial.println(result);
   }
 
-  currentBatchCount++;
+  // currentBatchCount++;
 
-  if (currentBatchCount >= batchSize) {
+  // if (currentBatchCount >= batchSize) {
+  //   udp.beginPacket(udpAddress, udpPort);
+  //   udp.write(batchData.data(), batchData.size());
+  //   int result = udp.endPacket();
+  //   if (result == 1) {
+  //     Serial.println("Batch sent successfully");
+  //   } else {
+  //     Serial.print("Error sending batch: ");
+  //     Serial.println(result);
+  //   }
+
+  //   batchData.clear();  // Clear the batch data
+  //   currentBatchCount = 0;  // Reset the batch count
+  // }
+}
+void sendCombinedData() {
+  if (imuDataReady && uwbDataReady) {
     udp.beginPacket(udpAddress, udpPort);
-    udp.write(batchData.data(), batchData.size());
+    udp.write(combinedData.data(), combinedData.size());
     int result = udp.endPacket();
     if (result == 1) {
-      Serial.println("Batch sent successfully");
+      Serial.println("Combined data sent successfully");
     } else {
-      Serial.print("Error sending batch: ");
+      Serial.print("Error sending combined data: ");
       Serial.println(result);
     }
 
-    batchData.clear();  // Clear the batch data
-    currentBatchCount = 0;  // Reset the batch count
+    combinedData.clear();
+    imuDataReady = false;
+    uwbDataReady = false;
   }
 }
+void newRange() {
+  float dist = DW1000Ranging.getDistantDevice()->getRange();
+  // Clear the batch data and add the UWB separator
+  combinedData.clear();
+  combinedData.insert(combinedData.end(), UWB_SEPARATOR, UWB_SEPARATOR + strlen(UWB_SEPARATOR));
+
+  binaryFloat hi;
+  hi.floatingPoint = dist;
+  combinedData.insert(combinedData.end(), hi.binary, hi.binary + 4);
+
+  // Send the UWB data immediately
+  udp.beginPacket(udpAddress, udpPort);
+  udp.write(combinedData.data(), combinedData.size());
+  int result = udp.endPacket();
+  if (result == 1) {
+    Serial.println("UWB data sent successfully");
+  } else {
+    Serial.print("Error sending UWB data: ");
+    Serial.println(result);
+  }
+}
+
+
 
 void setup() {
   Serial.begin(115200);
