@@ -27,6 +27,15 @@ bool sendData = false;
 int batchSize = 1;  // Default batch size
 int currentBatchCount = 0;
 
+enum Mode {
+  IMU_ONLY = 0,
+  UWB_CALIBRATION = 1,
+  UWB_DATA = 2,
+  IMU_UWB_DATA = 3
+};
+
+Mode currentMode = IMU_ONLY;
+
 double myArray[7];
 typedef union {
   float floatingPoint;
