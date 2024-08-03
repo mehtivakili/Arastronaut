@@ -168,6 +168,8 @@ void setup() {
   server.on("/start", handleStart);
   server.on("/stop", handleStop);
   server.on("/setBatch", handleSetBatch);
+  server.on("/mode", handleModeChange);
+
   server.begin();
 
   Serial.println("HTTP server started");
