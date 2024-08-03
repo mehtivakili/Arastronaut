@@ -178,14 +178,42 @@ void setup() {
 void loop() {
   server.handleClient();
 
-  if (sendData) {
-    accel.readSensor();
-    gyro.readSensor();
+  switch (currentMode) {
+    case IMU_ONLY:
+      if (sendData) {
+        accel.readSensor();
+        gyro.readSensor();
+        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+        sendIMUData();
+        delay(5);
+      }
+      break;
 
-    accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-    gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+    case UWB_CALIBRATION:
+      if (calibration_in_progress) {
+        DW1000Ranging.loop();
+      }
+      break;
 
-    sendIMUData();
-    delay(5);
+    case UWB_DATA:
+      DW1000Ranging.loop();
+      break;
+
+    case IMU_UWB_DATA:
+      if (sendData) {
+        accel.readSensor();
+        gyro.readSensor();
+        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+        sendIMUData();
+        delay(5);
+      }
+      DW1000Ranging.loop();
+      break;
+
+    default:
+      break;
   }
 }
+
