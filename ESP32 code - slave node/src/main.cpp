@@ -64,6 +64,36 @@ void handleSetBatch() {
   }
 }
 
+void handleModeChange() {
+  if (server.hasArg("mode")) {
+    int mode = server.arg("mode").toInt();
+    switch (mode) {
+      case IMU_ONLY:
+        currentMode = IMU_ONLY;
+        server.send(200, "text/plain", "Mode set to IMU_ONLY");
+        break;
+      case UWB_CALIBRATION:
+        currentMode = UWB_CALIBRATION;
+        server.send(200, "text/plain", "Mode set to UWB_CALIBRATION");
+        break;
+      case UWB_DATA:
+        currentMode = UWB_DATA;
+        server.send(200, "text/plain", "Mode set to UWB_DATA");
+        break;
+      case IMU_UWB_DATA:
+        currentMode = IMU_UWB_DATA;
+        server.send(200, "text/plain", "Mode set to IMU_UWB_DATA");
+        break;
+      default:
+        server.send(400, "text/plain", "Invalid mode");
+        break;
+    }
+  } else {
+    server.send(400, "text/plain", "Mode not specified");
+  }
+}
+
+
 void sendIMUData() {
   float tio_millis = static_cast<float>(millis());
   Tio = tio_millis / 1000.0;
