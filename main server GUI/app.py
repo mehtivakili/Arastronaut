@@ -374,7 +374,7 @@ def read_serial_data():
 
                 numbers = struct.unpack('<7f', part)
                 Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
-                print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
+                # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
                 
                 if not set_offset:
                     offset = numbers[0]
