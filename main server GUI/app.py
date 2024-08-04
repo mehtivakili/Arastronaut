@@ -39,7 +39,7 @@ message_queue = queue.Queue()
 CORS(app)
 
 ESP32_IP = "192.168.4.1"  # IP address of the ESP32
-UDP_IP = "0.0.0.0"  # Listen on all available interfaces
+UDP_IP = "192.168.4.100"  # Listen on all available interfaces
 UDP_PORT = 12346  # Port to bind the UDP socket
 global sock
 

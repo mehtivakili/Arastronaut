@@ -18,8 +18,11 @@ def parse_imu_data(data):
     print(f"IMU Data: Time={timestamp}, Accel=({accelX},{accelY},{accelZ}), Gyro=({gyroX},{gyroY},{gyroZ})")
 
 def parse_uwb_data(data):
-    distance = struct.unpack('f', data[0:4])[0]
-    print(f"UWB Data: Distance={distance}")
+    tio = struct.unpack('f', data[0:4])[0]
+    short_address = struct.unpack('f', data[4:8])[0]
+    distance = struct.unpack('f', data[8:12])[0]
+    print(f"UWB Data: Time={tio}, Short Address={short_address}, Distance={distance}")
+
 
 while True:
     data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
