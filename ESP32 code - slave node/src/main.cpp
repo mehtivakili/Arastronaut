@@ -4,6 +4,30 @@
 #include "BMI088.h"
 #include "DW1000.h"
 #include "DW1000Ranging.h"
+#include <WiFiAP.h>
+#include <DNSServer.h>
+
+DNSServer dnsServer;
+
+// List of MAC addresses and their corresponding static IP addresses
+struct StaticIPAssignment {
+  const char* macAddress;
+  IPAddress ipAddress;
+};
+
+StaticIPAssignment staticIPs[] = {
+  {"00:E9:3A:0D:66:D3", IPAddress(192, 168, 4, 2)},
+  // Add more MAC-IP pairs if needed
+};
+
+IPAddress handleDHCPRequest(const uint8_t* mac) {
+  for (const auto& entry : staticIPs) {
+    if (memcmp(mac, entry.macAddress, 6) == 0) {
+      return entry.ipAddress;
+    }
+  }
+  return IPAddress(0, 0, 0, 0); // Return 0.0.0.0 if MAC not found
+}
 
 Bmi088Accel accel(SPI, 32);
 Bmi088Gyro gyro(SPI, 25);
@@ -12,6 +36,18 @@ int16_t accelX_raw, accelY_raw, accelZ_raw;
 int16_t gyroX_raw, gyroY_raw, gyroZ_raw;
 
 double Tio = 0.0;
+
+#define SPI_SCK 18
+#define SPI_MISO 19
+#define SPI_MOSI 23
+#define DW_CS 5
+
+// connection pins
+const uint8_t PIN_RST = 27; // reset pin
+const uint8_t PIN_IRQ = 34; // irq pin
+const uint8_t PIN_SS = 5;   // spi select pin
+
+char tag_addr[] = "7D:00:22:EA:82:60:3B:9C";
 
 // Replace with your network credentials
 const char* sta_ssid = "D-Link";
@@ -87,6 +123,7 @@ void handleModeChange() {
         break;
       case UWB_CALIBRATION:
         currentMode = UWB_CALIBRATION;
+        calibration_in_progress = true;
         server.send(200, "text/plain", "Mode set to UWB_CALIBRATION");
         break;
       case UWB_DATA:
@@ -118,21 +155,20 @@ void sendIMUData() {
   myArray[5] = gyroY_raw;
   myArray[6] = gyroZ_raw;
 
-  // Append check string to batch data
-  // Clear the batch data and add the IMU header
-  combinedData.clear();
-  combinedData.insert(combinedData.end(), IMU_SEPARATOR, IMU_SEPARATOR + strlen(IMU_SEPARATOR));
+  std::vector<uint8_t> imuData;
+
+  // Add the IMU separator
+  imuData.insert(imuData.end(), IMU_SEPARATOR, IMU_SEPARATOR + strlen(IMU_SEPARATOR));
 
   for (int i = 0; i < 7; i++) {
     binaryFloat hi;
     hi.floatingPoint = myArray[i];
-    // batchData.insert(batchData.end(), hi.binary, hi.binary + 4);
-    combinedData.insert(combinedData.end(), hi.binary, hi.binary + 4);
-  
+    imuData.insert(imuData.end(), hi.binary, hi.binary + 4);
   }
+
   // Send the IMU data immediately
   udp.beginPacket(udpAddress, udpPort);
-  udp.write(batchData.data(), batchData.size());
+  udp.write(imuData.data(), imuData.size());
   int result = udp.endPacket();
   if (result == 1) {
     Serial.println("IMU data sent successfully");
@@ -140,54 +176,34 @@ void sendIMUData() {
     Serial.print("Error sending IMU data: ");
     Serial.println(result);
   }
-
-  // currentBatchCount++;
-
-  // if (currentBatchCount >= batchSize) {
-  //   udp.beginPacket(udpAddress, udpPort);
-  //   udp.write(batchData.data(), batchData.size());
-  //   int result = udp.endPacket();
-  //   if (result == 1) {
-  //     Serial.println("Batch sent successfully");
-  //   } else {
-  //     Serial.print("Error sending batch: ");
-  //     Serial.println(result);
-  //   }
-
-  //   batchData.clear();  // Clear the batch data
-  //   currentBatchCount = 0;  // Reset the batch count
-  // }
 }
-void sendCombinedData() {
-  if (imuDataReady && uwbDataReady) {
-    udp.beginPacket(udpAddress, udpPort);
-    udp.write(combinedData.data(), combinedData.size());
-    int result = udp.endPacket();
-    if (result == 1) {
-      Serial.println("Combined data sent successfully");
-    } else {
-      Serial.print("Error sending combined data: ");
-      Serial.println(result);
-    }
-
-    combinedData.clear();
-    imuDataReady = false;
-    uwbDataReady = false;
-  }
+void newDevice(DW1000Device *device) {
+  Serial.print("Device added: ");
+  Serial.println(device->getShortAddress(), HEX);
 }
+
+void inactiveDevice(DW1000Device *device) {
+  Serial.print("delete inactive device: ");
+  Serial.println(device->getShortAddress(), HEX);
+}
+
+bool UWB_init = false;
 void newRange() {
+
   float dist = DW1000Ranging.getDistantDevice()->getRange();
-  // Clear the batch data and add the UWB separator
-  combinedData.clear();
-  combinedData.insert(combinedData.end(), UWB_SEPARATOR, UWB_SEPARATOR + strlen(UWB_SEPARATOR));
+  Serial.println(dist);
+  std::vector<uint8_t> uwbData;
+
+  // Add the UWB separator
+  uwbData.insert(uwbData.end(), UWB_SEPARATOR, UWB_SEPARATOR + strlen(UWB_SEPARATOR));
 
   binaryFloat hi;
   hi.floatingPoint = dist;
-  combinedData.insert(combinedData.end(), hi.binary, hi.binary + 4);
+  uwbData.insert(uwbData.end(), hi.binary, hi.binary + 4);
 
   // Send the UWB data immediately
   udp.beginPacket(udpAddress, udpPort);
-  udp.write(combinedData.data(), combinedData.size());
+  udp.write(uwbData.data(), uwbData.size());
   int result = udp.endPacket();
   if (result == 1) {
     Serial.println("UWB data sent successfully");
@@ -232,6 +248,27 @@ void setup() {
   Serial.print("AP IP address: ");
   Serial.println(AP_IP);
 
+    dnsServer.start(53, "*", WiFi.softAPIP());
+
+  WiFi.onEvent([](arduino_event_id_t event, arduino_event_info_t info) {
+    if (event == ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED) {
+      Serial.print("New client connected with IP: ");
+      Serial.println(IPAddress(info.wifi_ap_staipassigned.ip.addr));
+      // You can call handleDHCPRequest here if needed
+    }
+  });
+
+  
+
+  SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
+  DW1000Ranging.initCommunication(PIN_RST, PIN_SS, PIN_IRQ); //Reset, CS, IRQ pin
+
+  DW1000Ranging.attachNewRange(newRange);
+  DW1000Ranging.attachNewDevice(newDevice);
+  DW1000Ranging.attachInactiveDevice(inactiveDevice);
+
+  DW1000Ranging.startAsTag(tag_addr, DW1000.MODE_LONGDATA_RANGE_LOWPOWER, false);
+
   server.on("/start", handleStart);
   server.on("/stop", handleStop);
   server.on("/setBatch", handleSetBatch);
@@ -244,6 +281,7 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  dnsServer.processNextRequest();
 
   switch (currentMode) {
     case IMU_ONLY:
@@ -282,5 +320,7 @@ void loop() {
     default:
       break;
   }
+  // delay(5);
+
 }
 
