@@ -4,30 +4,6 @@
 #include "BMI088.h"
 #include "DW1000.h"
 #include "DW1000Ranging.h"
-#include <WiFiAP.h>
-#include <DNSServer.h>
-
-DNSServer dnsServer;
-
-// List of MAC addresses and their corresponding static IP addresses
-struct StaticIPAssignment {
-  const char* macAddress;
-  IPAddress ipAddress;
-};
-
-StaticIPAssignment staticIPs[] = {
-  {"00:E9:3A:0D:66:D3", IPAddress(192, 168, 4, 2)},
-  // Add more MAC-IP pairs if needed
-};
-
-IPAddress handleDHCPRequest(const uint8_t* mac) {
-  for (const auto& entry : staticIPs) {
-    if (memcmp(mac, entry.macAddress, 6) == 0) {
-      return entry.ipAddress;
-    }
-  }
-  return IPAddress(0, 0, 0, 0); // Return 0.0.0.0 if MAC not found
-}
 
 Bmi088Accel accel(SPI, 32);
 Bmi088Gyro gyro(SPI, 25);
@@ -55,7 +31,7 @@ const char* sta_password = "09124151339";
 
 const char* ap_ssid = "ESP32_AP";
 const char* ap_password = "123456789";
-const char* udpAddress = "192.168.4.2";  // The IP address of the Python client (update this to match your PC's IP)
+const char* udpAddress = "192.168.4.100";  // The IP address of the Python client (update this to match your PC's IP)
 const int udpPort = 12346;  // The port to send data to
 
 WiFiUDP udp;
@@ -248,16 +224,6 @@ void setup() {
   Serial.print("AP IP address: ");
   Serial.println(AP_IP);
 
-    dnsServer.start(53, "*", WiFi.softAPIP());
-
-  WiFi.onEvent([](arduino_event_id_t event, arduino_event_info_t info) {
-    if (event == ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED) {
-      Serial.print("New client connected with IP: ");
-      Serial.println(IPAddress(info.wifi_ap_staipassigned.ip.addr));
-      // You can call handleDHCPRequest here if needed
-    }
-  });
-
   
 
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
@@ -281,7 +247,6 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  dnsServer.processNextRequest();
 
   switch (currentMode) {
     case IMU_ONLY:
