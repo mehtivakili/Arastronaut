@@ -26,8 +26,8 @@ const uint8_t PIN_SS = 5;   // spi select pin
 char tag_addr[] = "7D:00:22:EA:82:60:3B:9C";
 
 // Replace with your network credentials
-const char* sta_ssid = "D-Link";
-const char* sta_password = "09124151339";
+const char* sta_ssid = "ssid";
+const char* sta_password = "pass";
 // char udpAddress[16];  // The IP address of the Python client (update this to match your PC's IP)
 
 char* UDP_DEFAULT = "192.168.4.100";
@@ -118,6 +118,7 @@ void handleModeChange() {
         currentMode = IMU_UWB_DATA;
         server.send(200, "text/plain", "Mode set to IMU_UWB_DATA");
         break;
+        
       default:
         server.send(400, "text/plain", "Invalid mode");
         break;
@@ -183,7 +184,7 @@ void newRange() {
   Tio = tio_millis / 1000.0;
 
   float dist = DW1000Ranging.getDistantDevice()->getRange();
-    Serial.println(dist);
+    // Serial.println(dist);
 
 
   myArray2[0] = Tio;
@@ -280,8 +281,21 @@ void setup() {
   Serial.println("HTTP server started");
 }
 
+void logMemory() {
+  static unsigned long lastLogTime = 0;
+  unsigned long currentTime = millis();
+
+  if (currentTime - lastLogTime >= 500) {  // Log memory every 500 milliseconds
+    Serial.print("Free heap: ");
+    Serial.println(ESP.getFreeHeap());
+    lastLogTime = currentTime;
+  }
+}
+
+
 void loop() {
   server.handleClient();
+  logMemory();  // Add this line to log memory usage
 
   switch (currentMode) {
     case IMU_ONLY:

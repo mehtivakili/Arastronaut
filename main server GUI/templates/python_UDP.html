@@ -230,7 +230,7 @@
 
         
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
+    <script src="../static/particles.js"></script>
     <style>
         #particles-js {
             position: absolute;
@@ -897,6 +897,10 @@ function showMessage() {
     }, 2000); // Adjust the time the message stays visible
 }
 
+window.addEventListener('beforeunload', function (event) {
+            // Send a synchronous request to stop the UDP listener
+            navigator.sendBeacon('/python_UDP', '');
+        });
 
 
         async function toggleRecording() {

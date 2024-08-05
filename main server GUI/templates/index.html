@@ -1,21 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
     <link rel="stylesheet" href="../static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Helvetica:wght@400;700&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
+    <!-- <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> -->
+    <script src="../static/particles.js"></script>
     <script src="../static/js/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - Firmware Flasher</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        body {
-            font-family: 'Helvetica', sans-serif !important;
-        }
+
 
 
         .network-info {
@@ -84,9 +81,18 @@
             <form action="/python_serial" method="post">
                 <button type="submit" class="same-size">Python Serial Monitor</button>
             </form>
+            <!-- <button onclick="location.href='/python_UDP'">Python UDP</button> -->
+
             <form action="/python_UDP" method="post">
-                <button type="submit" class="same-size">Python UDP</button>
+                <button type="submit" class="same-size">IMU UDP</button>
             </form>
+            
+            <form action="/uwb_udp" method="post">
+                <button type="submit" class="same-size">UWB UDP</button>
+            </form>
+
+            <!-- <button onclick="location.href='/uwb_udp'">UWB UDP</button> -->
+
 
         </div>
     </div>

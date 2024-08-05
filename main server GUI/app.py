@@ -72,7 +72,12 @@ gyro_bias = [4.53855, 4.001, -1.9779]
 # acce_bias = [33124.2, 33275.2, 32364.4]
 # gyro_bias = [32777.1, 32459.8, 32511.8]
 
+# Control flag for the UDP listener thread
+udp_thread_running = False
+udp_thread = None
 
+udp_thread_running2 = False
+udp_thread2 = None
 
 def apply_calibration(accel, gyro):
     acce_calibrated = [
@@ -87,6 +92,7 @@ def apply_calibration(accel, gyro):
     ]
     return acce_calibrated, gyro_calibrated
 
+state = "imu"
 
 FIRMWARE_BASE_PATH = 'firmwares'
 serial_port = None
@@ -115,10 +121,40 @@ def get_connected_ssid():
         print(f"Could not get SSID: {e}")
         return "Unknown"
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
+    global udp_thread_running, udp_thread2, udp_thread_running2, udp_thread
+    #     # Stop the UDP thread
+    udp_thread_running = False
+    udp_thread_running = False
+
+    if udp_thread2:
+            udp_thread2.join()
+            print("UDP thread2 stopped")
+
+    if udp_thread:
+            udp_thread.join()
+            print("UDP thread stopped")
+
     network_info = get_network_info()
     return render_template('index.html', network_info=network_info)
+
+    # global udp_thread_running, udp_thread2, state, udp_thread
+    # if request.method == 'POST':
+    #     # Start the UDP thread
+    #     udp_thread_running = True
+    #     state = "uwb"
+    #     if udp_thread:
+    #         udp_thread.join()
+    #     udp_thread2 = threading.Thread(target=read_serial_data)
+    #     udp_thread2.start()
+    #     print("UDP thread2 started")
+    # elif request.method == 'POST':
+    #     # Stop the UDP thread
+    #     udp_thread_running = False
+    #     if udp_thread2:
+    #         udp_thread2.join()
+    #         print("UDP thread2 stopped")
 
 @app.route('/start')
 def start():
@@ -161,6 +197,38 @@ def calibration():
 def imu_calibration():
     network_info = get_network_info()
     return render_template('imu_calibration.html', network_info=network_info)
+
+# @app.route('/uwb_udp')
+# def uwb_udp():
+#     network_info = get_network_info()
+#     # Start the UDP listener in a separate thread
+#     udp_thread = threading.Thread(target=uwb_udp_listener)
+#     udp_thread.start()
+#     print("UDP thread started")
+
+#     return render_template('uwb_udp.html', network_info=network_info)
+
+@app.route('/uwb_udp', methods=['GET', 'POST'])
+def uwb_udp():
+    global udp_thread_running, udp_thread2, state, udp_thread
+    if request.method == 'POST':
+        # Start the UDP thread
+        udp_thread_running = True
+        state = "uwb"
+        if udp_thread:
+            udp_thread.join()
+        udp_thread2 = threading.Thread(target=uwb_udp_listener)
+        udp_thread2.start()
+        print("UDP thread2 started")
+    # elif request.method == 'POST':
+    #     # Stop the UDP thread
+    #     udp_thread_running = False
+    #     if udp_thread2:
+    #         udp_thread2.join()
+    #         print("UDP thread2 stopped")
+    
+    network_info = get_network_info()
+    return render_template('uwb_udp.html', network_info=network_info)
 
 @app.route('/magnometer_calibration')
 def magnometer_calibration():
@@ -207,17 +275,38 @@ def python_serial():
         network_info = get_network_info()
         return render_template('python_serial.html', network_info=network_info)
 
+# @app.route('/python_UDP', methods=['GET', 'POST'])
+# def python_UDP():
+#     global serial_thread
+#     if request.method == 'POST':
+#             # Start the UDP thread
+#             serial_thread = threading.Thread(target=read_serial_data)
+#             serial_thread.start()
+#             print("UDP thread started")
+ 
+#             network_info = get_network_info()
+#             return render_template('python_UDP.html', network_info=network_info)
 @app.route('/python_UDP', methods=['GET', 'POST'])
 def python_UDP():
+    global udp_thread_running, udp_thread, state, udp_thread2
     if request.method == 'POST':
-            # Start the UDP thread
-            serial_thread = threading.Thread(target=read_serial_data)
-            serial_thread.start()
-            print("UDP thread started")
- 
-            network_info = get_network_info()
-            return render_template('python_UDP.html', network_info=network_info)
-
+        # Start the UDP thread
+        udp_thread_running = True
+        state = "imu"
+        if udp_thread2:
+            udp_thread2.join()
+        udp_thread = threading.Thread(target=read_serial_data)
+        udp_thread.start()
+        print("UDP thread started")
+    # elif request.method == 'POST':
+    #     # Stop the UDP thread
+    #     udp_thread_running = False
+    #     if udp_thread:
+    #         udp_thread.join()
+    #         print("UDP thread stopped")
+    
+    network_info = get_network_info()
+    return render_template('python_UDP.html', network_info=network_info)
 @app.route('/get_ports', methods=['GET'])
 def get_ports():
     ports = list(serial.tools.list_ports.comports())
@@ -293,6 +382,58 @@ def calculate_checksum(data):
 offset = 0
 from datetime import datetime
 
+def uwb_udp_listener():
+    global udp_thread_running2
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
+
+    sock.bind((UDP_IP, UDP_PORT))
+
+    last_received_time = time.time()
+    visible_device = False
+    
+    while udp_thread_running2:
+        data, addr = sock.recvfrom(4096)
+        current_time = time.time()
+
+        if data.startswith(b'cba/'):
+        # if True:
+            tio = struct.unpack('f', data[4:8])[0]
+            short_address = struct.unpack('f', data[8:12])[0]
+            distance = struct.unpack('f', data[12:16])[0]
+
+            uwb_data = {
+                'time': tio,
+                'short_address': short_address,
+                'distance': distance,
+                'visible': True
+            }
+            # uwb_data = {
+            #     'time': "tio",
+            #     'short_address': "short_address",
+            #     'distance': "distance",
+            #     'visible': True
+            # }
+            print(uwb_data)
+            sio_client.emit('uwb_data', uwb_data)
+            # socketio.emit('uwb_data', uwb_data)
+            last_received_time = current_time
+            visible_device = True
+            # print("uwb data sent!!!!!!!")
+        elif visible_device and (current_time - last_received_time > 3):
+            uwb_data = {
+                'visible': False
+            }
+            # sio2_client.emit('uwb_data', uwb_data)
+
+            socketio.emit('uwb_data', uwb_data)
+            visible_device = False
+
+    sock.close()
+    print("UDP listener thread2 terminated.")
+
+
 def read_serial_data():
     print("read_serial_data started")
     global serial_running
@@ -309,6 +450,8 @@ def read_serial_data():
     global numbers
     global batch_size
     global cycle_counter_limit
+    global udp_thread_running
+    global state
     # global sock
     numbers = []
     # offset = 0  # Set this to your required offset
@@ -343,6 +486,8 @@ def read_serial_data():
     check_encoded = check.encode()
     check_length = len(check_encoded)
 
+    visible_device = False
+
     buffer = bytearray()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
@@ -353,99 +498,144 @@ def read_serial_data():
    
  #         buffer.extend(serial_port.read(serial_port.in_waiting))
     print("why the ..")
-    while True:
-        data, addr = sock.recvfrom(4096)
-        buffer.extend(data)
-        # print(f"Buffer length: {len(buffer)}")
+    while udp_thread_running:
+        # if(state == "imu"):
+        if(True):
+            data, addr = sock.recvfrom(4096)
+            buffer.extend(data)
+            # print(f"Buffer length: {len(buffer)}")
 
-        while len(buffer) >= 32:  # 4 bytes for the "abc/" and 28 bytes for the packet
-            start_index = buffer.find(check_encoded)
-            if start_index == -1:
-                break  # "abc/" not found, wait for more data
+            while len(buffer) >= 32:  # 4 bytes for the "abc/" and 28 bytes for the packet
+                start_index = buffer.find(check_encoded)
+                if start_index == -1:
+                    break  # "abc/" not found, wait for more data
 
-            end_index = start_index + len(check_encoded) + 28
-            if end_index > len(buffer):
-                break  # Not enough data for a full packet, wait for more data
+                end_index = start_index + len(check_encoded) + 28
+                if end_index > len(buffer):
+                    break  # Not enough data for a full packet, wait for more data
 
-            part = buffer[start_index + len(check_encoded):end_index]
-            buffer = buffer[end_index:]  # Remove the processed part from the buffer
+                part = buffer[start_index + len(check_encoded):end_index]
+                buffer = buffer[end_index:]  # Remove the processed part from the buffer
 
-            if len(part) == 28:   
+                if len(part) == 28:   
 
-                numbers = struct.unpack('<7f', part)
-                Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
-                # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
-                
-                if not set_offset:
-                    offset = numbers[0]
-                    set_offset = True
-                
-                # Extract data
-                Tio = numbers[0] - offset
-                accel = numbers[1:4]
-                gyro = numbers[4:7]
-                # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
-                if calibration_enabled:
-                    accel, gyro = apply_calibration(accel, gyro)
+                    numbers = struct.unpack('<7f', part)
+                    Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
+                    # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
+                    
+                    if not set_offset:
+                        offset = numbers[0]
+                        set_offset = True
+                    
+                    # Extract data
+                    Tio = numbers[0] - offset
+                    accel = numbers[1:4]
+                    gyro = numbers[4:7]
+                    # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
+                    if calibration_enabled:
+                        accel, gyro = apply_calibration(accel, gyro)
 
-                # Initialize the first Tio and current second start
-                if last_Tio is None:
+                    # Initialize the first Tio and current second start
+                    if last_Tio is None:
+                        last_Tio = Tio
+                        current_second_start = int(Tio)
+
+                    # Increment the cycle counter
+                    cycle_counter += 1
+
+                    # Emit data every 20 cycles
+                    if cycle_counter >= cycle_counter_limit:
+                        # Append data to batch
+                        batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                        if len(batch_data) >= batch_size:
+                            # Emit the batch of data
+                            sio_client.emit('sensor_data', batch_data)
+                            # socketio.emit('sensor_data', batch_data)
+
+                            # Reset the batch data
+                            batch_data = []
+                        # Reset the cycle counter
+                        cycle_counter = 0
+
+                    # Check for Tio change and calculate rate
+                    if int(Tio) != current_second_start:
+                        # Print the rate for the last second
+                        print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
+
+                        # Reset the packet count for the new second
+                        packets_count = 0
+                        current_second_start = int(Tio)
+
+                    # Increment the packet count for the current second
+                    packets_count += 1
                     last_Tio = Tio
-                    current_second_start = int(Tio)
+                    if Timer != 0:
+                        if start_time != 0:
+                            end_time = time.time()
+                            if (end_time - start_time < Timer):
+                                formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                                formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
 
-                # Increment the cycle counter
-                cycle_counter += 1
-
-                # Emit data every 20 cycles
-                if cycle_counter >= cycle_counter_limit:
-                    # Append data to batch
-                    batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
-                    if len(batch_data) >= batch_size:
-                        # Emit the batch of data
-                        sio_client.emit('sensor_data', batch_data)
-                        # Reset the batch data
-                        batch_data = []
-                    # Reset the cycle counter
-                    cycle_counter = 0
-
-                # Check for Tio change and calculate rate
-                if int(Tio) != current_second_start:
-                    # Print the rate for the last second
-                    print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
-
-                    # Reset the packet count for the new second
-                    packets_count = 0
-                    current_second_start = int(Tio)
-
-                # Increment the packet count for the current second
-                packets_count += 1
-                last_Tio = Tio
-                if Timer != 0:
-                    if start_time != 0:
-                        end_time = time.time()
-                        if (end_time - start_time < Timer):
-                            formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                            formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
-
-                            with open(acc_filename, mode='a', newline='') as acc_file:
-                                acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                acc_writer.writerow(formatted_accel)
-                            with open(gyro_filename, mode='a', newline='') as gyro_file:
-                                gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                gyro_writer.writerow(formatted_gyro)
+                                with open(acc_filename, mode='a', newline='') as acc_file:
+                                    acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                    acc_writer.writerow(formatted_accel)
+                                with open(gyro_filename, mode='a', newline='') as gyro_file:
+                                    gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                    gyro_writer.writerow(formatted_gyro)
+                            else:
+                                if createdFlag:
+                                    print(f"{acc_filename} and {gyro_filename} are created.")
+                                    createdFlag = False
                         else:
-                            if createdFlag:
-                                print(f"{acc_filename} and {gyro_filename} are created.")
-                                createdFlag = False
-                    else:
-                        start_time = time.time()
+                            start_time = time.time()
 
-                # Remove the processed packet and the separator from the buffer
-                # buffer = buffer[packet_end:]
-            else:
-                print(f"Expected 28 bytes but received {len(parts)} bytes.")
-                break
+                    # Remove the processed packet and the separator from the buffer
+                    # buffer = buffer[packet_end:]
+                else:
+                    print(f"Expected 28 bytes but received {len(parts)} bytes.")
+                    break
+        elif (state == "uwb"):
+                    # data, addr = sock.recvfrom(4096)
+            current_time = time.time()
+
+            # if data.startswith(b'cba/'):
+            if udp_thread_running:
+                # tio = struct.unpack('f', data[4:8])[0]
+                # short_address = struct.unpack('f', data[8:12])[0]
+                # distance = struct.unpack('f', data[12:16])[0]
+
+                # uwb_data = {
+                #     'time': tio,
+                #     'short_address': short_address,
+                #     'distance': distance,
+                #     'visible': True
+                # }
+                uwb_data = {
+                    'time': "tio",
+                    'short_address': "short_address",
+                    'distance': "distance",
+                    'visible': True
+                }
+                # print(uwb_data)
+                # sio_client.emit('uwb_data', uwb_data)
+                socketio.emit('uwb_data', uwb_data)
+                last_received_time = current_time
+                visible_device = True
+                # print("uwb data sent!!!!!!!")
+            elif visible_device and (current_time - last_received_time > 3):
+                uwb_data = {
+                    'visible': False
+                }
+                sio_client.emit('uwb_data', uwb_data)
+
+                # socketio.emit('uwb_data', uwb_data)
+                visible_device = False
+
+
     # else:
+    sock.close()
+    print("UDP listener thread terminated.")
+
         # break
 
 Timer = 0
@@ -463,6 +653,9 @@ def start_client():
     sio_client.connect('http://localhost:3000')  # Connect to Node.js server on port 3000
     sio_client.wait()
 
+def start_client2():
+    sio2_client.connect('http://localhost:3000')  # Connect to Node.js server on port 3000
+    sio2_client.wait()
 
 @app.route('/start_recording', methods=['POST'])
 def start_recording():
@@ -666,6 +859,8 @@ import pexpect
 #     socketio.emit('connect', {'data': 'Connected'})
 
 # Handle connection event for the client
+
+
 @sio_client.event
 def connect():
     print('Client connection established')

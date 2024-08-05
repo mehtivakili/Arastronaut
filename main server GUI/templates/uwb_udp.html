@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UWB UDP Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .top-container {
+            width: 100%;
+            background-color: #1e1e1e;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+        .top-container h1 {
+            color: #00b300;
+            margin: 0;
+        }
+        .back-button {
+            position: absolute;
+            left: 30px;
+            background: linear-gradient(90deg, #004d00, #00b300);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-align: center;
+            font-size: 16px;
+            width: auto;
+        }
+        .back-button:hover {
+            background: linear-gradient(90deg, #00b300, #004d00);
+        }
+        .main-container {
+            flex-grow: 1;
+            width: 100%;
+            display: flex;
+            padding-top: 10px;
+            overflow: hidden;
+        }
+        .side-container {
+            width: 30%;
+            background-color: rgba(30, 30, 30, 0.8);
+            padding: 20px;
+            margin-left: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+        .uwb-device {
+            display: none;
+            margin-top: 20px;
+        }
+        .uwb-device.visible {
+            display: block;
+        }
+        .wifi-logo {
+            width: 50px;
+            height: 50px;
+            background-image: url('/static/wifi_logo.gif');
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .serial-monitor {
+            width: 70%;
+            height: calc(100vh - 60px);
+            overflow: auto;
+            background-color: rgba(30, 30, 30, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            margin-left: 20px;
+            padding: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        button {
+            background: linear-gradient(90deg, #004d00, #00b300);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #00b300, #004d00);
+        }
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        .theme-toggle-button {
+            top: 20px;
+            right: 20px;
+            background-color: #00b300;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .theme-toggle-button:hover {
+            background-color: #004d00;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+        }
+        body.light-theme .theme-toggle-button {
+            background-color: #d3d3d3;
+            color: #000;
+        }
+        body.light-theme .theme-toggle-button:hover {
+            background-color: #a9a9a9;
+        }
+    </style>
+    <script src="../static/particles.js"></script>
+    <style>
+        /* Additional styles here */
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+    <script>
+        particlesJS('particles-js', {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#ffffff"
+                },
+                "shape": {
+                    "type": "circle",
+                    "stroke": {
+                        "width": 0,
+                        "color": "#000000"
+                    },
+                    "polygon": {
+                        "nb_sides": 5
+                    }
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": false,
+                    "anim": {
+                        "enable": false,
+                        "speed": 1,
+                        "opacity_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                    "anim": {
+                        "enable": false,
+                        "speed": 40,
+                        "size_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#ffffff",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 6,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                    "attract": {
+                        "enable": false,
+                        "rotateX": 600,
+                        "rotateY": 1200
+                    }
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "repulse"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+                "modes": {
+                    "grab": {
+                        "distance": 400,
+                        "line_linked": {
+                            "opacity": 1
+                        }
+                    },
+                    "bubble": {
+                        "distance": 400,
+                        "size": 40,
+                        "duration": 2,
+                        "opacity": 8,
+                        "speed": 3
+                    },
+                    "repulse": {
+                        "distance": 200,
+                        "duration": 0.4
+                    },
+                    "push": {
+                        "particles_nb": 4
+                    },
+                    "remove": {
+                        "particles_nb": 2
+                    }
+                }
+            },
+            "retina_detect": true
+        });
+    </script>
+    <script>
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+        }
+    </script>
+    
+    <div class="top-container">
+        <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
+        <h1>UWB UDP Interface</h1>
+    </div>
+    <div class="main-container">
+        <div class="side-container">
+            <button class="theme-toggle-button" onclick="toggleTheme()">Toggle Theme</button>
+            <h2>UWB Device Information</h2>
+            <div id="uwb-device" class="uwb-device">
+                <div class="wifi-logo"></div>
+                <p id="device-address"></p>
+            </div>
+        </div>
+        <div class="serial-monitor">
+            <div class="log" id="log">
+                <!-- Log will appear here -->
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://localhost:3000',{transports:['websocket']});
+        // Debug: Check connection status
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+        });
+        socket.on('uwb_data', function(data) {
+            console.log(data)
+            const deviceDiv = document.getElementById('uwb-device');
+            const addressP = document.getElementById('device-address');
+            addressP.innerText = 'Device Address: ' + data.short_address;
+
+            if (data.visible) {
+                deviceDiv.classList.add('visible');
+            } else {
+                deviceDiv.classList.remove('visible');
+            }
+        });
+
+        window.addEventListener('beforeunload', function (event) {
+            // Send a synchronous request to stop the UDP listener
+            navigator.sendBeacon('/uwb_udp', '');
+        });
+    </script>
+</body>
+</html>
+
