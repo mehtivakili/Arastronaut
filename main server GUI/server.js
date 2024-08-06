@@ -41,6 +41,11 @@ io.on('connection', (socket) => {
     io.emit('sensor_data', data); // Broadcast the sensor data to all clients
   });
 
+  socket.on('UWB_data', (data)=>{
+    console.log("UWB_data received: " , data);
+    io.emit("UWB_data", data);
+  })
+
   // Handle disconnection events
   socket.on('disconnect', () => {
     console.log('user disconnected');

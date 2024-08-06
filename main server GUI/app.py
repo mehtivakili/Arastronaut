@@ -230,6 +230,9 @@ def uwb_udp():
     network_info = get_network_info()
     return render_template('uwb_udp.html', network_info=network_info)
 
+
+
+
 @app.route('/magnometer_calibration')
 def magnometer_calibration():
     network_info = get_network_info()
@@ -253,6 +256,14 @@ def update_batch_size():
     data = request.json
     batch_size = data.get('batchSize', batch_size)
     return jsonify({'status': 'success', 'batchSize': batch_size})
+
+@app.route('/device_orientation')
+def device_orientation():
+    global udp_thread3
+    udp_thread3 = threading.Thread(target=read_serial_data)
+    udp_thread3.start()
+    network_info = get_network_info
+    return render_template('device_orientation.html', network_info=network_info)
 
 
 
@@ -307,7 +318,18 @@ def python_UDP():
     
     network_info = get_network_info()
     return render_template('python_UDP.html', network_info=network_info)
+
+# @app.route('/device-orientation', methods=['GET', 'POST'])
+# def device_orientation():
+#         if(request.content_type == POST):
+#             udp_thread = threading.Thread(target=read_serial_data)
+#             udp_thread.start()
+#         print("UDP thread started")
+#     network_info = get_network_info()
+#     return render_template('python_UDP.html', network_info=network_info)
+
 @app.route('/get_ports', methods=['GET'])
+
 def get_ports():
     ports = list(serial.tools.list_ports.comports())
     port_list = [{'device': port.device, 'description': port.description} for port in ports]
@@ -520,7 +542,7 @@ def read_serial_data():
                 if len(part) == 28:   
 
                     numbers = struct.unpack('<7f', part)
-                    Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
+                    # Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
                     # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
                     
                     if not set_offset:
@@ -550,7 +572,6 @@ def read_serial_data():
                         if len(batch_data) >= batch_size:
                             # Emit the batch of data
                             sio_client.emit('sensor_data', batch_data)
-                            # socketio.emit('sensor_data', batch_data)
 
                             # Reset the batch data
                             batch_data = []
@@ -594,6 +615,8 @@ def read_serial_data():
                 else:
                     print(f"Expected 28 bytes but received {len(parts)} bytes.")
                     break
+
+                
         elif (state == "uwb"):
                     # data, addr = sock.recvfrom(4096)
             current_time = time.time()
@@ -653,9 +676,6 @@ def start_client():
     sio_client.connect('http://localhost:3000')  # Connect to Node.js server on port 3000
     sio_client.wait()
 
-def start_client2():
-    sio2_client.connect('http://localhost:3000')  # Connect to Node.js server on port 3000
-    sio2_client.wait()
 
 @app.route('/start_recording', methods=['POST'])
 def start_recording():

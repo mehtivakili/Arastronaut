@@ -392,6 +392,35 @@ body.light-theme .collapsible-toggle:hover {
 
 
 
+
+
+
+
+.box {
+            width: 100px;
+            height: 100px;
+            background-color: #00b300;
+            transform-style: preserve-3d;
+            transform-origin: center;
+            transform: perspective(500px);
+            transition: transform 0.1s linear;
+        }
+        .face {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ccc;
+        }
+        .face.front  { transform: translateZ(50px); }
+        .face.back   { transform: rotateY(180deg) translateZ(50px); }
+        .face.left   { transform: rotateY(-90deg) translateZ(50px); }
+        .face.right  { transform: rotateY(90deg) translateZ(50px); }
+        .face.top    { transform: rotateX(90deg) translateZ(50px); }
+        .face.bottom { transform: rotateX(-90deg) translateZ(50px); }
+
+
+
     </style>
     
     <body>
@@ -637,8 +666,23 @@ body.light-theme .collapsible-toggle:hover {
                 <div class="log" id="log">
                     <!-- Serial log will appear here -->
                 </div>
+
+
+            
+            </div>
+            <div class="box" id="box">
+                <div class="face front"></div>
+                <div class="face back"></div>
+                <div class="face left"></div>
+                <div class="face right"></div>
+                <div class="face top"></div>
+                <div class="face bottom"></div>
             </div>
         </div>
+        <!-- <div class="log" id="log">
+
+        </div>
+         -->
     </body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -672,11 +716,30 @@ body.light-theme .collapsible-toggle:hover {
         //     console.log('aaa',data)
         // })
         contor = 0
+        function updateUWBData(data) {
+            const logElement = document.getElementById('log');
+            // Assuming data is an array of objects with address and distance properties
+            data.sort((a, b) => a.address - b.address); // Sort data by address
+            logElement.innerHTML = ''; // Clear existing log
+            data.forEach(item => {
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `Address: ${item.address}, Distance: ${item.distance}`;
+                logElement.appendChild(logEntry);
+            });
+        }
+
+        socket.on('UWB_data', function(data) {
+            console.log(data);
+            // updateUWBData(data);
+            updateUWBData(data);
+
+        });
         socket.on('sensor_data', function(batch) {
             batch.forEach(data => {
                 //  console.log(data)
             
             const { Tio, accel, gyro } = data;
+            updateOrientation(accel, gyro);
             contor += 1;
             // console.log('Received data:', Tio, accel, gyro); // Debug statement
             // console.log(contor)
@@ -770,6 +833,21 @@ body.light-theme .collapsible-toggle:hover {
                 option.text = `${port.device} - ${port.description}`;
                 portSelect.appendChild(option);
             });
+        }
+
+        const box = document.getElementById('box');
+        let currentRotation = {alpha: 0, beta: 0, gamma: 0};
+
+        function updateOrientation(accel, gyro) {
+            const alpha = Math.atan2(accel[1], accel[2]) * 180 / Math.PI;
+            const beta = Math.atan2(-accel[0], Math.sqrt(accel[1] * accel[1] + accel[2] * accel[2])) * 180 / Math.PI;
+            const gamma = Math.atan2(gyro[1], gyro[0]) * 180 / Math.PI;
+
+            currentRotation.alpha = alpha;
+            currentRotation.beta = beta;
+            currentRotation.gamma = 0;
+
+            box.style.transform = `rotateX(${currentRotation.beta}deg) rotateY(${currentRotation.gamma}deg) rotateZ(${currentRotation.alpha}deg)`;
         }
 
         async function openSerial() {

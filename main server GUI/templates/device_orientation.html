@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMU Orientation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .box {
+            width: 100px;
+            height: 100px;
+            background-color: #00b300;
+            transform-style: preserve-3d;
+            transform-origin: center;
+            transform: perspective(500px);
+            transition: transform 0.1s linear;
+        }
+        .face {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ccc;
+        }
+        .face.front  { transform: translateZ(50px); }
+        .face.back   { transform: rotateY(180deg) translateZ(50px); }
+        .face.left   { transform: rotateY(-90deg) translateZ(50px); }
+        .face.right  { transform: rotateY(90deg) translateZ(50px); }
+        .face.top    { transform: rotateX(90deg) translateZ(50px); }
+        .face.bottom { transform: rotateX(-90deg) translateZ(50px); }
+    </style>
+</head>
+<body>
+    <div class="box" id="box">
+        <div class="face front"></div>
+        <div class="face back"></div>
+        <div class="face left"></div>
+        <div class="face right"></div>
+        <div class="face top"></div>
+        <div class="face bottom"></div>
+    </div>
+
+    <script src="../static/js/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:3000', {transports: ['websocket']});
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+        });
+
+        socket.on('sensor_data', function(batch) {
+            batch.forEach(data => {
+                console.log(batch);
+                const accel = data.accel;
+                const gyro = data.gyro;
+                updateOrientation(accel, gyro);
+            });
+        });
+
+        const box = document.getElementById('box');
+        let currentRotation = {alpha: 0, beta: 0, gamma: 0};
+
+        function updateOrientation(accel, gyro) {
+            const alpha = Math.atan2(accel[1], accel[2]) * 180 / Math.PI;
+            const beta = Math.atan2(-accel[0], Math.sqrt(accel[1] * accel[1] + accel[2] * accel[2])) * 180 / Math.PI;
+            const gamma = Math.atan2(gyro[1], gyro[0]) * 180 / Math.PI;
+
+            currentRotation.alpha = alpha;
+            currentRotation.beta = beta;
+            currentRotation.gamma = 0;
+
+            box.style.transform = `rotateX(${currentRotation.beta}deg) rotateY(${currentRotation.gamma}deg) rotateZ(${currentRotation.alpha}deg)`;
+        }
+    </script>
+</body>
+</html>

@@ -26,13 +26,14 @@ const uint8_t PIN_SS = 5;   // spi select pin
 char tag_addr[] = "7D:00:22:EA:82:60:3B:9C";
 
 // Replace with your network credentials
-const char* sta_ssid = "D-Link";
-const char* sta_password = "09124151339";
+const char* sta_ssid = "ssid";
+const char* sta_password = "pass";
 // char udpAddress[16];  // The IP address of the Python client (update this to match your PC's IP)
 
+char* UDP_DEFAULT = "192.168.4.100";
 const char* ap_ssid = "ESP32_AP";
 const char* ap_password = "123456789";
-const char* udpAddress = "192.168.4.100";  // The IP address of the Python client (update this to match your PC's IP)
+char* udpAddress = UDP_DEFAULT;  // The IP address of the Python client (update this to match your PC's IP)
 const int udpPort = 12346;  // The port to send data to
 
 WiFiUDP udp;
@@ -67,6 +68,12 @@ typedef union {
   float floatingPoint;
   byte binary[4];
 } binaryFloat;
+
+double myArray2[3];
+typedef union {
+  float floatingPoint;
+  byte binary[4];
+} binaryFloat2;
 
 const char* check = "abc/";
 std::vector<uint8_t> batchData;
@@ -144,15 +151,19 @@ void sendIMUData() {
     imuData.insert(imuData.end(), hi.binary, hi.binary + 4);
   }
 
-  // Send the IMU data immediately
-  udp.beginPacket(udpAddress, udpPort);
-  udp.write(imuData.data(), imuData.size());
-  int result = udp.endPacket();
-  if (result == 1) {
-    Serial.println("IMU data sent successfully");
-  } else {
-    Serial.print("Error sending IMU data: ");
-    Serial.println(result);
+  currentBatchCount++;
+    if (currentBatchCount >= batchSize) {
+
+    // Send the IMU data immediately
+    udp.beginPacket(udpAddress, udpPort);
+    udp.write(imuData.data(), imuData.size());
+    int result = udp.endPacket();
+    if (result == 1) {
+      // Serial.println("IMU data sent successfully");
+    } else {
+      Serial.print("Error sending IMU data: ");
+      Serial.println(result);
+    }
   }
 }
 void newDevice(DW1000Device *device) {
@@ -167,9 +178,13 @@ void inactiveDevice(DW1000Device *device) {
 
 bool UWB_init = false;
 void newRange() {
+  std::vector<uint8_t> uwbData;
+
+  float tio_millis = static_cast<float>(millis());
+  Tio = tio_millis / 1000.0;
 
   float dist = DW1000Ranging.getDistantDevice()->getRange();
-    Serial.println(dist);
+    // Serial.println(dist);
 
 
   myArray2[0] = Tio;
@@ -179,7 +194,15 @@ void newRange() {
   // Add the UWB separator
   uwbData.insert(uwbData.end(), UWB_SEPARATOR, UWB_SEPARATOR + strlen(UWB_SEPARATOR));
 
-  binaryFloat hi;
+  for (int i = 0; i < 3; i++) {
+    binaryFloat hi;
+    hi.floatingPoint = myArray2[i];
+    uwbData.insert(uwbData.end(), hi.binary, hi.binary + 4);
+  }
+
+
+
+  binaryFloat2 hi;
   hi.floatingPoint = dist;
   uwbData.insert(uwbData.end(), hi.binary, hi.binary + 4);
 
@@ -205,7 +228,7 @@ void setup() {
     Serial.println("Sensor initialization failed");
     while (1);
   }
-
+/*
   // Connect to Wi-Fi network in station mode (STA)
   WiFi.begin(sta_ssid, sta_password);
   Serial.print("Connecting to WiFi: ");
@@ -215,12 +238,19 @@ void setup() {
     delay(1000);
     Serial.print(".");
   }
+  
 
   Serial.println("\nConnected to WiFi");
   Serial.print("SSID: ");
   Serial.println(WiFi.SSID());
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
+
+  // String ipString = WiFi.localIP().toString();
+  // ipString.toCharArray(udpAddress, 16);
+  // udpAddress = "192.168.2.7";
+
+  */
 
   // Set up access point (AP) mode
   WiFi.softAP(ap_ssid, ap_password);
@@ -275,7 +305,7 @@ void loop() {
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
         gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
         sendIMUData();
-        delay(5);
+        delay(2);
       }
       break;
 
@@ -296,7 +326,7 @@ void loop() {
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
         gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
         sendIMUData();
-        delay(5);
+        delay(2);
       }
       DW1000Ranging.loop();
       break;
