@@ -508,6 +508,8 @@ def read_serial_data():
     check_encoded = check.encode()
     check_length = len(check_encoded)
 
+    UWB_SEPARATOR = b'cba/'  # Assuming 'uwb/' is the separator for UWB data
+    UWB_PACKET_SIZE = 16  # 4 bytes for Tio, 2 bytes for address, 4 bytes for distance, and 4 bytes for separator
     visible_device = False
 
     buffer = bytearray()
@@ -526,6 +528,31 @@ def read_serial_data():
             data, addr = sock.recvfrom(4096)
             buffer.extend(data)
             # print(f"Buffer length: {len(buffer)}")
+
+            # Process UWB data
+            while len(buffer) >= UWB_PACKET_SIZE:
+                start_index = buffer.find(UWB_SEPARATOR)
+                if start_index == -1:
+                    break  # UWB separator not found, wait for more data
+
+                end_index = start_index + len(UWB_SEPARATOR) + 12  # 12 bytes for the UWB data
+                if end_index > len(buffer):
+                    break  # Not enough data for a full UWB packet, wait for more data
+
+                part = buffer[start_index + len(UWB_SEPARATOR):end_index]
+                buffer = buffer[end_index:]  # Remove the processed part from the buffer
+
+                if len(part) == 12:  # 12 bytes: 4 for Tio, 2 for address, 4 for distance
+                    Tio, address, dist = struct.unpack('<3f', part)
+
+                    if not set_offset:
+                        offset = Tio
+                        set_offset = True
+
+                    # print(f"UWB Data - Tio: {Tio:.3f}, Address: {address}, Distance: {dist:.2f}")
+                    sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist})
+                    
+
 
             while len(buffer) >= 32:  # 4 bytes for the "abc/" and 28 bytes for the packet
                 start_index = buffer.find(check_encoded)

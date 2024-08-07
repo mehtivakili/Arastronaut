@@ -678,11 +678,12 @@ body.light-theme .collapsible-toggle:hover {
                 <div class="face top"></div>
                 <div class="face bottom"></div>
             </div>
-        </div>
-        <!-- <div class="log" id="log">
+            <div class="log" id="log">
 
+            </div>
         </div>
-         -->
+
+         
     </body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -718,19 +719,24 @@ body.light-theme .collapsible-toggle:hover {
         contor = 0
         function updateUWBData(data) {
             const logElement = document.getElementById('log');
-            // Assuming data is an array of objects with address and distance properties
-            data.sort((a, b) => a.address - b.address); // Sort data by address
-            logElement.innerHTML = ''; // Clear existing log
-            data.forEach(item => {
-                const logEntry = document.createElement('div');
-                logEntry.textContent = `Address: ${item.address}, Distance: ${item.distance}`;
-                logElement.appendChild(logEntry);
-            });
-        }
+            // console.log(data)
+            // console.log(`Tio : ${data.Tio}`)
 
+            // Assuming data is an array of objects with address and distance properties
+            //data.sort((a, b) => a.address - b.address); // Sort data by address
+            // logElement.innerHTML = ''; // Clear existing log
+
+            // data.forEach(item => {
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `Address: ${data.address}, Distance: ${data.distance}`;
+                logElement.appendChild(logEntry);
+            // }
+        // );
+        }
         socket.on('UWB_data', function(data) {
-            console.log(data);
+            // console.log(data);
             // updateUWBData(data);
+            const {Tio2, address, distance} = data;
             updateUWBData(data);
 
         });
