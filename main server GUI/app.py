@@ -178,8 +178,28 @@ def firmware():
     network_info = get_network_info()
     return render_template('firmware.html', network_info=network_info)
 
-@app.route('/data_acquisition')
+
+@app.route('/data_acquisition', methods=['GET', 'POST'])
 def data_acquisition():
+    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
+    if request.method == 'POST':
+        # Start the UDP thread
+        udp_thread_running = True
+        state = "data_acquisition"
+        if udp_thread2:
+            udp_thread2.join()
+        if udp_thread:
+            udp_thread.join()
+        udp_thread3 = threading.Thread(target=read_serial_data)
+        udp_thread3.start()
+        print("UDP thread started")
+    # elif request.method == 'POST':
+    #     # Stop the UDP thread
+    #     udp_thread_running = False
+    #     if udp_thread:
+    #         udp_thread.join()
+    #         print("UDP thread stopped")
+    
     network_info = get_network_info()
     return render_template('data_acquisition.html', network_info=network_info)
 

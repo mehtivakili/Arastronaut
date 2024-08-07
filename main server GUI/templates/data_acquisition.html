@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Serial Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .top-container {
+            width: 100%;
+            background-color: #1e1e1e;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+        .top-container h1 {
+            color: #00b300;
+            margin: 0;
+        }
+        .back-button {
+            position: absolute;
+            left: 30px;
+            background: linear-gradient(90deg, #004d00, #00b300);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-align: center;
+            font-size: 16px;
+            width: auto;
+        }
+        .back-button:hover {
+            background: linear-gradient(90deg, #00b300, #004d00);
+        }
+
+        .main-container {
+            flex-grow: 1;
+            width: 100%;
+            display: flex;
+            padding-top: 10px;
+            overflow: hidden;
+        }
+        .side-container {
+            width: 30%;
+            background-color: rgba(30, 30, 30, 0.8); /* More transparent */
+            padding: 20px;
+            margin-left: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: 100%; /* Ensure the side container fits within the viewport */
+        }
+        .serial-monitor {
+            width: 70%;
+            height: calc(100vh - 60px);
+            overflow: auto;
+            background-color:  rgba(30, 30, 30, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            margin-left: 20px;
+            padding: 20px;
+        }
+        select, button, input {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            background: #333;
+            color: white;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 12px; /* Smaller font size for more compact elements */
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .input-group {
+            margin-bottom: 15px; /* Reduced margin for more compact layout */
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .input-group small {
+            display: block;
+            margin-top: 5px;
+            color: #bbb;
+        }
+        .input-group div {
+            margin-top: 5px;
+        }
+        button {
+            background: linear-gradient(90deg, #004d00, #00b300);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #00b300, #004d00);
+        }
+        .log {
+            background: #121212;
+            color: #00b300;
+            height: calc(100% - 40px);
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        #startStopButton.stop-recording {
+            background-color: red;
+            color: white;
+            font-weight: bold;
+            background: none;
+            background: #ff0425;
+        }
+        #startStopButton.stop-recording:hover {
+            background: radial-gradient(circle, #4e011f 0%, #ff0425 100%);
+        }
+        #actionButtons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        #actionButtons button {
+            flex: 1;
+        }
+        .plot-container {
+            width: 100%;
+            height: 50%;
+        }
+        .flex-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        @keyframes slow-flash {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.1;
+            }
+        }
+        .flash {
+            color: red;
+            animation: slow-flash 2s infinite;
+        }
+        #timerDisplayContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px;
+            position: relative;
+        }
+        #timerDisplay {
+            font-size: 1.5em;
+            font-weight: bold;
+            z-index: 1;
+        }
+        @keyframes flashingRing {
+            0% {
+                box-shadow: 0 0 10px 2px rgba(255, 0, 0, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 10px 10px rgba(255, 0, 0, 1);
+            }
+            100% {
+                box-shadow: 0 0 10px 2px rgba(255, 0, 0, 0.5);
+            }
+        }
+        .flashing-ring {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            animation: flashingRing 2s infinite;
+        }
+        .theme-toggle-button {
+            /* position: fixed; */
+            top: 20px;
+            right: 20px;
+            background-color: #00b300;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .theme-toggle-button:hover {
+            background-color: #004d00;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+        }
+
+        body.light-theme .theme-toggle-button {
+            background-color: #d3d3d3;
+            color: #000;
+        }
+
+        body.light-theme .theme-toggle-button:hover {
+            background-color: #a9a9a9;
+        }
+
+        
+    </style>
+    <script src="../static/particles.js"></script>
+    <style>
+        #particles-js {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        .input-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .input-group {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .input-group label {
+        margin-bottom: 5px;
+    }
+
+    .input-group input {
+        width: 100%;
+    }
+
+    .info-icon {
+        cursor: pointer;
+        font-size: 16px;
+        margin-left: 5px;
+    }
+
+    .info-icon::after {
+        content: attr(title);
+        position: absolute;
+        bottom: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 5px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s, visibility 0.3s;
+        font-size: 12px;
+        z-index: 10;
+    }
+
+            .info-icon:hover::after {
+                opacity: 1;
+                visibility: visible;
+            }
+
+.collapsible-section {
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #004d00;
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.collapsible-header:hover {
+    background-color: #00b300;
+}
+
+.collapsible-header h2 {
+    margin: 0;
+    font-size: 16px; /* Adjust the font size for better responsiveness */
+}
+
+.collapsible-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 14px; /* Adjust the font size for better responsiveness */
+    cursor: pointer;
+    padding: 10px;
+    text-align: center;
+    width: 100%;
+    background-color: #004d00;
+    transition: background-color 0.3s;
+}
+
+.collapsible-toggle:hover {
+    background-color: #00b300;
+}
+
+.collapsible-content {
+    display: none;
+    padding: 10px;
+    animation: slideDown 0.3s ease-in-out forwards;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease, opacity 0.5s ease;
+}
+
+body.light-theme .collapsible-header {
+    background-color: #d3d3d3;
+    color: black;
+}
+
+body.light-theme .collapsible-header:hover {
+    background-color: #a9a9a9;
+}
+
+body.light-theme .collapsible-toggle {
+    background-color: #d3d3d3;
+    color: black;
+}
+
+body.light-theme .collapsible-toggle:hover {
+    background-color: #a9a9a9;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px; /* Adjust based on your content's height */
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        max-height: 500px; /* Adjust based on your content's height */
+    }
+    to {
+        opacity: 0;
+        max-height: 0;
+    }
+}
+
+.collapsible-content.show {
+    max-height: 1000px; /* Ensure this is sufficient to fit the content */
+    padding: 10px;
+    overflow: visible;
+}
+
+
+
+
+
+
+
+.box {
+            width: 100px;
+            height: 100px;
+            background-color: #00b300;
+            transform-style: preserve-3d;
+            transform-origin: center;
+            transform: perspective(500px);
+            transition: transform 0.1s linear;
+        }
+        .face {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ccc;
+        }
+        .face.front  { transform: translateZ(50px); }
+        .face.back   { transform: rotateY(180deg) translateZ(50px); }
+        .face.left   { transform: rotateY(-90deg) translateZ(50px); }
+        .face.right  { transform: rotateY(90deg) translateZ(50px); }
+        .face.top    { transform: rotateX(90deg) translateZ(50px); }
+        .face.bottom { transform: rotateX(-90deg) translateZ(50px); }
+
+
+
+    </style>
+    
+    <body>
+        <div id="particles-js"></div>
+        <script>
+            particlesJS('particles-js',
+            {
+                "particles": {
+                    "number": {
+                        "value": 80,
+                        "density": {
+                            "enable": true,
+                            "value_area": 800
+                        }
+                    },
+                    "color": {
+                        "value": "#ffffff"
+                    },
+                    "shape": {
+                        "type": "circle",
+                        "stroke": {
+                            "width": 0,
+                            "color": "#000000"
+                        },
+                        "polygon": {
+                            "nb_sides": 5
+                        }
+                    },
+                    "opacity": {
+                        "value": 0.5,
+                        "random": false,
+                        "anim": {
+                            "enable": false,
+                            "speed": 1,
+                            "opacity_min": 0.1,
+                            "sync": false
+                        }
+                    },
+                    "size": {
+                        "value": 3,
+                        "random": true,
+                        "anim": {
+                            "enable": false,
+                            "speed": 40,
+                            "size_min": 0.1,
+                            "sync": false
+                        }
+                    },
+                    "line_linked": {
+                        "enable": true,
+                        "distance": 150,
+                        "color": "#ffffff",
+                        "opacity": 0.4,
+                        "width": 1
+                    },
+                    "move": {
+                        "enable": true,
+                        "speed": 6,
+                        "direction": "none",
+                        "random": false,
+                        "straight": false,
+                        "out_mode": "out",
+                        "bounce": false,
+                        "attract": {
+                            "enable": false,
+                            "rotateX": 600,
+                            "rotateY": 1200
+                        }
+                    }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": {
+                        "onhover": {
+                            "enable": true,
+                            "mode": "repulse"
+                        },
+                        "onclick": {
+                            "enable": true,
+                            "mode": "push"
+                        },
+                        "resize": true
+                    },
+                    "modes": {
+                        "grab": {
+                            "distance": 400,
+                            "line_linked": {
+                                "opacity": 1
+                            }
+                        },
+                        "bubble": {
+                            "distance": 400,
+                            "size": 40,
+                            "duration": 2,
+                            "opacity": 8,
+                            "speed": 3
+                        },
+                        "repulse": {
+                            "distance": 200,
+                            "duration": 0.4
+                        },
+                        "push": {
+                            "particles_nb": 4
+                        },
+                        "remove": {
+                            "particles_nb": 2
+                        }
+                    }
+                },
+                "retina_detect": true
+            });
+        </script>
+        <script>
+            function toggleTheme() {
+                document.body.classList.toggle('light-theme');
+            }
+        </script>
+        
+        <div class="top-container">
+            <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
+            <h1>IMU Calibration</h1>
+        </div>
+        <div class="main-container">
+            <div class="side-container">
+                <button class="theme-toggle-button" style="display: none;" onclick="toggleTheme()">Toggle Theme</button>
+
+                <div id="configSerial">
+                    <h2>Select Serial Port</h2>
+                    <form onsubmit="event.preventDefault(); openSerial();">
+                        <div class="input-group">
+                            <select id="port" name="port" required></select>
+                            <input type="number" id="baudrate" name="baudrate" placeholder="Baud Rate" value="115200" required>
+                        </div>
+                        <button onclick="clearPlots()"  type="submit">Open Serial Port</button>
+                    </form>
+                </div>
+
+                <h1>ESP32 IMU Data Control</h1>
+                <button onclick="startData()">Start Data Transmission</button>
+                <button onclick="stopData()">Stop Data Transmission</button>
+
+                <script>
+                    function startData() {
+                        fetch('/start')
+                            .then(response => response.json())
+                            .then(data => alert(data.status))
+                            .catch(error => console.error('Error:', error));
+                    }
+
+                    function stopData() {
+                        fetch('/stop')
+                            .then(response => response.json())
+                            .then(data => alert(data.status))
+                            .catch(error => console.error('Error:', error));
+                    }
+                </script>
+                <!-- <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)"> -->
+                        <h3>Plot Controller</h3>
+                    <!-- </div>
+                    <div class="collapsible-content"> -->
+
+                        <div class="input-group">
+                            <label for="cycleCounterRange">Cycle Counter</label>
+                            <input type="range" id="cycleCounterRange" name="cycleCounterRange" min="1" max="100" value="10">
+                            <span id="cycleCounterValue">10</span>
+                            <small>Set the number of cycles after which data is emitted</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="batchSizeRange">Batch Size</label>
+                            <input type="range" id="batchSizeRange" name="batchSizeRange" min="1" max="100" value="20">
+                            <span id="batchSizeValue">20</span>
+                            <small>Set the number of samples in each batch</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="sendingRate">Network Sending Rate</label>
+                            <div id="sendingRate">200 ms</div>
+                        </div>
+                        <!-- <button class="collapsible-toggle" onclick="toggleCollapsible(this.parentElement)">▲ Collapse</button>
+                    </div>
+                </div> -->
+    
+                
+                                
+                <div class="input-group" style="display: none;">
+                    <label for="recordingName">File Name</label>
+                    <input type="text" id="recordingName" name="fileName" placeholder="please enter the file name" value="test">
+                </div>
+                <div class="input-row" id="recordParams">
+                    <div class="input-group">
+                        <label for="initiationStaticInterval">Init Static T</label>
+                        <input type="number" id="initiationStaticInterval" name="initiationStaticInterval" placeholder="50" value="50" required>
+                        <span class="info-icon" title="Recommended: 50 seconds">ℹ️</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="turnCounts">Turn Counts</label>
+                        <input type="number" id="turnCounts" name="turnCounts" placeholder="40" value="40" required>
+                        <span class="info-icon" title="Recommended: 36 to 50 turns">ℹ️</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="T_wait">T_wait</label>
+                        <input type="number" id="T_wait" name="T_wait" placeholder="4" value="4" required>
+                        <span class="info-icon" title="Recommended: 1 to 4 seconds">ℹ️</span>
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: row; gap: 10px;">
+                    <p id="finalTimeDisplay">Final Time: 0 seconds</p>
+                    <div id="timerDisplayContainer">
+                        <div id="timerDisplay" style="display: none; color: white;"></div>
+                    </div>
+                </div>
+                <p id="flashMessage" class="flash" style="display: none;">Turn the device</p>
+                <p id="latexEquation">Total time = Initiation Static Interval + Turn Counts * T_wait</p>
+                <script>
+                    document.getElementById('latexEquation').innerHTML = '\\(\\text{Total time} = \\text{Initiation Static Interval} + \\text{Turn Counts} \\times T_{\\text{wait}}\\)';
+                    MathJax.typesetPromise(); // Render the LaTeX equation
+                </script>
+                <style>
+                    #latexEquation {
+                        font-size: 12px;
+                    }
+                </style>
+                <div class="input-group">
+                    <button id="startStopButton" onclick="toggleRecording()">Start Recording</button>
+                </div>
+                <div class="input-row" id="actionButtons" style="display: none;">
+                    <button id="backButton" onclick="goBack()">Back</button>
+                    <button id="plotButton" onclick="plotThis()">Plot This</button>
+                    <button id="calibrateButton" onclick="calibrate()">Calibrate</button>
+                </div>
+                <button type="button" onclick="getCalibratedData()">Get Calibrated Data</button>
+                <h3>Upload Calibration Files</h3>
+                <input type="file" id="accFileInput" accept=".calib">
+                <input type="file" id="gyroFileInput" accept=".calib">
+                <button type="button" onclick="uploadCalibrationFiles()">Upload Calibration Files</button>
+
+                
+            </div>
+            <div class="serial-monitor">
+                <div class="plot-container" id="accelPlot"></div>
+                <div class="plot-container" id="gyroPlot"></div>
+                <div class="plot-container" id="UWBPlot"></div>
+
+                <div class="log" id="log">
+                    <!-- Serial log will appear here -->
+                </div>
+
+
+            
+            </div>
+            <div class="box" id="box">
+                <div class="face front"></div>
+                <div class="face back"></div>
+                <div class="face left"></div>
+                <div class="face right"></div>
+                <div class="face top"></div>
+                <div class="face bottom"></div>
+            </div>
+            <div class="log" id="log">
+
+            </div>
+        </div>
+
+         
+    </body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- MathJax script for rendering LaTeX equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../static/js/theme.js"></script>
+
+    <script>
+        let isRecording = false;
+        let isSerialPortOpen = false;
+        const socket = io('http://localhost:3000',{transports:['websocket']});
+
+        // Debug: Check connection status
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+        });
+        let TioData = [];
+        let accelX = [], accelY = [], accelZ = [];
+        let gyroX = [], gyroY = [], gyroZ = [];
+        let UWB_Time = [];
+        let UWB_d1 = []; UWB_d2 = []; UWB_d3 = [];
+
+        // socket.on('sensor_data', function(data){
+        //     console.log('aaa',data)
+        // })
+        contor = 0
+        function updateUWBData(data) {
+            const logElement = document.getElementById('log');
+            // console.log(data.address)
+            // console.log(`Tio : ${data.Tio}`)
+
+            // Assuming data is an array of objects with address and distance properties
+            //data.sort((a, b) => a.address - b.address); // Sort data by address
+            // logElement.innerHTML = ''; // Clear existing log
+
+            // data.forEach(item => {
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `Address: ${data.address}, Distance: ${data.distance}`;
+                logElement.appendChild(logEntry);
+                UWB_Time.push(data.Tio2);
+                if(data.address == 130){
+                    UWB_d1.push(data.distance)
+                } else if (data.address == 131){
+                    UWB_d2.push(data.distance)
+                } else if (data.address == 133){
+                    UWB_d3.push(data.distance)
+                }
+
+                console.log(UWB_d1)
+                
+
+                Plotly.update('UWBPlot', {
+                // x: [UWB_Time],
+                // y: [UWB_d1, UWB_d2, UWB_d3]
+                x: [UWB_Time],
+                y: [2, 3, 4]
+            })
+
+
+                if (TioData.length > 500) {
+                UWB_Time.shift();
+                UWB_d1.shift();
+                UWB_d2.shift();
+                UWB_d3.shift();
+            }
+            // }
+        // );
+        }
+        socket.on('UWB_data', function(data) {
+            // console.log(data);
+            // updateUWBData(data);
+            const {Tio2, address, distance} = data;
+
+            
+
+            updateUWBData(data);
+
+        });
+        socket.on('sensor_data', function(batch) {
+            batch.forEach(data => {
+                //  console.log(data)
+            
+            const { Tio, accel, gyro } = data;
+            updateOrientation(accel, gyro);
+            contor += 1;
+            // console.log('Received data:', Tio, accel, gyro); // Debug statement
+            // console.log(contor)
+            TioData.push(Tio);
+            accelX.push(accel[0]);
+            accelY.push(accel[1]);
+            accelZ.push(accel[2]);
+            gyroX.push(gyro[0]);
+            gyroY.push(gyro[1]);
+            gyroZ.push(gyro[2]);
+
+
+            
+            // Limit the number of points to avoid performance issues
+            if (TioData.length > 500) {
+                TioData.shift();
+                accelX.shift();
+                accelY.shift();
+                accelZ.shift();
+                gyroX.shift();
+                gyroY.shift();
+                gyroZ.shift();
+
+            }
+        });
+
+            Plotly.update('accelPlot', {
+                x: [TioData],
+                y: [accelX, accelY, accelZ]
+            });
+
+            Plotly.update('gyroPlot', {
+                x: [TioData],
+                y: [gyroX, gyroY, gyroZ]
+            });
+
+
+        });
+
+        function clearPlots() {
+            TioData = [];
+            accelX = [];
+            accelY = [];
+            accelZ = [];
+            gyroX = [];
+            gyroY = [];
+            gyroZ = [];
+            UWB_d1 = [];
+            UWB_d2 = [];
+            UWB_d3 = [];
+
+            Plotly.update('accelPlot', {
+                x: [[]],
+                y: [[], [], []]
+            });
+
+            Plotly.update('gyroPlot', {
+                x: [[]],
+                y: [[], [], []]
+            });
+            Plotly.update('UWBPlot', {
+                x: [[]],
+                y: [[], [], []]
+            })
+        }
+
+        function toggleCollapsible(header) {
+            const content = header.nextElementSibling;
+            const toggleButton = header.querySelector('.collapsible-toggle');
+
+            if (content.style.display === "block") {
+                content.style.display = "none";
+                toggleButton.textContent = "▼";
+                content.style.animation = "slideUp 0.3s ease-in-out forwards";
+            } else {
+                content.style.display = "block";
+                toggleButton.textContent = "▲";
+                content.style.animation = "slideDown 0.3s ease-in-out forwards";
+            }
+        }
+
+        function generateDefaultRecordingName() {
+            const now = new Date();
+            const year = now.getFullYear().toString().slice(-2); // YY
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // MM
+            const day = String(now.getDate()).padStart(2, '0'); // DD
+            const hours = String(now.getHours()).padStart(2, '0'); // HH
+            const minutes = String(now.getMinutes()).padStart(2, '0'); // MM
+            return `${year}${month}${day}${hours}${minutes}`;
+        }
+
+
+        async function getPorts() {
+            const response = await fetch('/get_ports');
+            const ports = await response.json();
+            const portSelect = document.getElementById('port');
+            portSelect.innerHTML = '';
+            ports.forEach(port => {
+                const option = document.createElement('option');
+                option.value = port.device;
+                option.text = `${port.device} - ${port.description}`;
+                portSelect.appendChild(option);
+            });
+        }
+
+        const box = document.getElementById('box');
+        let currentRotation = {alpha: 0, beta: 0, gamma: 0};
+
+        function updateOrientation(accel, gyro) {
+            const alpha = Math.atan2(accel[1], accel[2]) * 180 / Math.PI;
+            const beta = Math.atan2(-accel[0], Math.sqrt(accel[1] * accel[1] + accel[2] * accel[2])) * 180 / Math.PI;
+            const gamma = Math.atan2(gyro[1], gyro[0]) * 180 / Math.PI;
+
+            currentRotation.alpha = alpha;
+            currentRotation.beta = beta;
+            currentRotation.gamma = 0;
+
+            box.style.transform = `rotateX(${currentRotation.beta}deg) rotateY(${currentRotation.gamma}deg) rotateZ(${currentRotation.alpha}deg)`;
+        }
+
+        async function openSerial() {
+            const configSerial = document.getElementById('configSerial')
+
+            const port = document.getElementById('port').value;
+            const baudrate = document.getElementById('baudrate').value;
+            // const isBinary = document.getElementById('binaryCheckbox').checked;
+            const formData = new FormData();
+            formData.append('port', port);
+            formData.append('baudrate', baudrate);
+            // formData.append('is_binary', isBinary);
+
+            const response = await fetch('/open_serial', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                isSerialPortOpen = true; // Update flag
+                configSerial.style.display = 'none'
+                // alert('Serial port opened successfully');
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+        }
+
+        let timerInterval;
+
+function calculateFinalTime() {
+    const initiationStaticInterval = parseFloat(document.getElementById('initiationStaticInterval').value);
+    const turnCounts = parseFloat(document.getElementById('turnCounts').value);
+    const T_wait = parseFloat(document.getElementById('T_wait').value);
+    
+    const finalTime = initiationStaticInterval + (turnCounts * T_wait);
+    document.getElementById('finalTimeDisplay').textContent = `Total Time: ${finalTime} seconds`;
+
+    return finalTime;
+}
+
+function startTimer(duration) {
+    let timer = 0;
+    const display = document.getElementById('timerDisplay');
+    const timerContainer = document.getElementById('timerDisplayContainer');
+    display.style.display = 'block';
+    display.textContent = timer;
+
+    const initiationStaticInterval = parseFloat(document.getElementById('initiationStaticInterval').value);
+    const turnCounts = parseFloat(document.getElementById('turnCounts').value);
+    const T_wait = parseFloat(document.getElementById('T_wait').value);
+    
+    let turnMessageShown = false;
+        // Add the flashing ring class
+        timerContainer.classList.add('flashing-ring');
+
+
+    timerInterval = setInterval(() => {
+        timer++;
+        display.textContent = timer;
+
+        if (timer >= initiationStaticInterval && !turnMessageShown) {
+            showMessage("Turn the device");
+            turnMessageShown = true;
+        } else if (turnMessageShown && (timer - initiationStaticInterval) % T_wait === 0 && (timer - initiationStaticInterval) / T_wait <= turnCounts - 1) {
+            showMessage("Turn the device");
+        }
+
+        if (timer >= duration) {
+            clearInterval(timerInterval);
+            display.style.display = 'none';
+            isRecording = false
+            showActionButtons();
+            timerContainer.classList.remove('flashing-ring'); // Remove the flashing ring class
+        }
+    }, 1000); // Update every second
+}
+
+
+function resetToStartRecordingState() {
+    resetTime()
+    const startStopButton = document.getElementById('startStopButton');
+    startStopButton.textContent = 'Start Recording';
+    startStopButton.classList.remove('stop-recording');
+    startStopButton.style.display = 'flex'; // Ensure it's displayed
+    startStopButton.style.justifyContent = 'center'; // Center the text
+    startStopButton.style.alignItems = 'center'; // Center the text
+
+    const actionButtons = document.getElementById('actionButtons');
+    actionButtons.style.display = 'none';
+
+    const recordParams = document.getElementById('recordParams');
+    recordParams.style.display = "flex";
+    
+}
+
+
+function showActionButtons() {
+    const startStopButton = document.getElementById('startStopButton');
+    startStopButton.style.display = 'none';
+
+    const actionButtons = document.getElementById('actionButtons');
+    actionButtons.style.display = 'flex';
+
+    const recordParams = document.getElementById('recordParams');
+    recordParams.style.display = 'none';
+}
+
+// function showMessage(message) {
+//     const messageElement = document.createElement('div');
+//     messageElement.textContent = message;
+//     messageElement.className = 'flash';
+//     document.body.appendChild(messageElement);
+
+//     setTimeout(() => {
+//         document.body.removeChild(messageElement);
+//     }, 2000); // Adjust the time the message stays visible
+// }
+
+function showMessage() {
+    const messageElement = document.getElementById('flashMessage');
+    messageElement.style.display = 'block';
+
+    setTimeout(() => {
+        messageElement.style.display = 'none';
+    }, 2000); // Adjust the time the message stays visible
+}
+
+window.addEventListener('beforeunload', function (event) {
+            // Send a synchronous request to stop the UDP listener
+            navigator.sendBeacon('/python_UDP', '');
+        });
+
+
+        async function toggleRecording() {
+            // clearPlots();
+            // console.log(isRecording)
+            resetTime();
+            const timerContainer = document.getElementById('timerDisplayContainer');
+
+                const startStopButton = document.getElementById('startStopButton');
+            if(isSerialPortOpen === false) {
+                alert('Please open the serial port first.');
+                return; 
+            }
+            if (isRecording) {
+            // Stop Recording Logic
+            console.log("send stop req")
+            const response = await fetch('/stop_recording', {
+                method: 'GET'
+            });
+            if (response.ok) {
+                // alert('Recording stopped');
+                // clearPlot();
+                console.log("did work")
+                stopRecording();
+                resetToStartRecordingState();
+                // Add the flashing ring class
+                timerContainer.classList.remove('flashing-ring'); // Remove the flashing ring class
+
+            } else {
+                alert('Error stopping recording');
+            }
+            return;
+            }
+
+            const recordingName = document.getElementById('recordingName').value;
+            if (!recordingName) {
+                alert('Please enter a recording name');
+                return;
+            }
+            const finalTime = calculateFinalTime(); // Calculate the final time
+            const fileName = document.getElementById('recordingName').value;
+            // const offsetValue = calculateFinalTime(); // Calculate the final time
+            // const Timer = document.getElementById('Timer').value;
+            const formData = new FormData();
+            formData.append('offset', finalTime);
+            formData.append('recordingName', fileName);
+            // formData.append('Timer', Timer);
+
+            const response = await fetch('/start_recording', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                document.getElementById('recordingName').value = fileName; // Display the recording name as file name
+                startTimer(finalTime); // Start the timer when recording starts
+                console.log('hehehe')
+                // alert('Recording started successfully');
+                startStopButton.textContent = 'Stop Recording';
+                startStopButton.classList.add('stop-recording');
+                isRecording = true;
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+         }
+
+         function stopRecording() {
+            resetTime()
+            clearInterval(timerInterval); // Stop the timer interval
+            clearPlots(); // Clear the plots
+            isRecording = false; // Reset the recording state
+            const display = document.getElementById('timerDisplay');
+            display.style.display = 'none'; // Hide the timer display
+            // display.style.visibility = 'hidden'
+            display.textContent = 0;
+            const startStopButton = document.getElementById('startStopButton');
+            startStopButton.textContent = 'Start Recording';
+            startStopButton.classList.remove('stop-recording');
+            console.log("Stopped recording, state reset");
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval); // Stop the timer interval
+            const display = document.getElementById('timerDisplay');
+            display.style.display = 'none'; // Hide the timer display
+            // display.style.visibility = 'hidden'
+            display.textContent = '0'; // Reset the timer display to 0
+        }
+
+        // function clearPlots() {
+        //     // Clear the plots logic here
+        //     Plotly.purge('accelPlot'); // Replace 'accelPlot' with your plot ID
+        //     Plotly.purge('gyroPlot'); // Replace 'gyroPlot' with your plot ID
+        // }
+
+        async function resetTime() {
+            const resetValue = 0
+            const formData = new FormData();
+            formData.append('offset', resetValue);
+            clearPlots();
+            const response = await fetch('/start_recording', {
+                method: 'POST',
+                body: formData
+            })
+            const result = await response.json();
+            if (result.status === 'success') {
+                // alert('Recording reset successfully');
+            } else {
+                alert(`Error: ${result.message}`);
+            }
+            
+        }
+
+        async function plotThis() {
+            // const recordingName = document.getElementById('recordingName').value;
+            const response = await fetch(`/plot_data`);
+            if (response.ok) {
+                alert('Plotting started');
+            } else {
+                alert('Error plotting data');
+            }
+        }        
+        
+        async function getCalibratedData() {
+            try {
+                const response = await fetch('/get_calibrated_data', {
+                    method: 'GET'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Calibrated Data:', data);
+                    // alert('Calibrated data retrieved successfully.');
+                } else {
+                    alert('Error retrieving calibrated data');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function goBack() {
+            // window.location.href = '/python_serial';
+            resetToStartRecordingState()
+            // stopRecording()
+        }
+
+        async function calibrate() {
+            // alert('Calibrate button clicked');
+            if (true) {
+                // Stop Recording Logic
+                console.log("Calibration started");
+                try {
+                    const response = await fetch('/calibrate', {
+                        method: 'GET'
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log("Calibration complete");
+                        console.log("Output:", data.output);
+                        console.log("Calibration Parameters:", data.calib_params);
+                        
+                        // Display the calibration parameters
+                        alert('Calibration successful. Check console for details.');
+                        console.log('Accelerometer Calibration Data:', data.calib_params.acc_calib);
+                        console.log('Gyroscope Calibration Data:', data.calib_params.gyro_calib);
+
+                        // Add the flashing ring class
+                        timerContainer.classList.remove('flashing-ring'); // Remove the flashing ring class
+                    } else {
+                        alert('Error during calibration');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+        }
+
+        async function closeSerial() {
+            const response = await fetch('/close_serial', {
+                method: 'POST'
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                console.log('Serial port closed successfully');
+            } else {
+                console.error(`Error: ${result.message}`);
+            }
+        }
+
+
+        async function uploadCalibrationFiles() {
+            const accFile = document.getElementById('accFileInput').files[0];
+            const gyroFile = document.getElementById('gyroFileInput').files[0];
+
+            if (!accFile || !gyroFile) {
+                alert('Please select both accelerometer and gyroscope calibration files.');
+                return;
+            }
+
+            const accData = await accFile.text();
+            const gyroData = await gyroFile.text();
+
+
+            const calibrationData = {
+                accData: accData,
+                gyroData: gyroData
+            };
+
+            try {
+                const response = await fetch('/upload_calibration_files', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(calibrationData)
+                });
+
+                if (response.ok) {
+                    alert('Calibration files uploaded successfully.');
+                } else {
+                    alert('Error uploading calibration files');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+ 
+
+        function clearPlotAndStartRecording() {
+            clearPlots();
+            startRecording();
+        }
+
+
+        window.onload = getPorts;
+
+        window.addEventListener('beforeunload', function() {
+            closeSerial();
+        });
+
+        window.addEventListener('pagehide', function() {
+            closeSerial();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const recordingNameInput = document.getElementById('recordingName');
+            recordingNameInput.placeholder = generateDefaultRecordingName();
+           
+            resetTime();
+
+            // Update the final time in real-time as the user inputs values
+            document.getElementById('initiationStaticInterval').addEventListener('input', calculateFinalTime);
+            document.getElementById('turnCounts').addEventListener('input', calculateFinalTime);
+            document.getElementById('T_wait').addEventListener('input', calculateFinalTime);
+
+            // Initial calculation of final time
+            calculateFinalTime();
+
+
+                // Dark theme settings for Plotly charts
+                const darkThemeLayout = {
+                    paper_bgcolor: 'rgba(30, 30, 30, 0)', // Dark gray background
+                    plot_bgcolor: 'rgba(30, 30, 30, 0)',  // Dark gray plot area
+                    font: {
+                        color: '#ffffff',   // White font color
+                    },
+                    xaxis: {
+                        gridcolor: '#444', // Grid color for x-axis
+                        zerolinecolor: '#444', // Zero line color for x-axis
+                        linecolor: '#444', // Line color for x-axis
+                        tickcolor: '#444', // Tick color for x-axis
+                    },
+                    yaxis: {
+                        gridcolor: '#444', // Grid color for y-axis
+                        zerolinecolor: '#444', // Zero line color for y-axis
+                        linecolor: '#444', // Line color for y-axis
+                        tickcolor: '#444', // Tick color for y-axis
+                    },
+                    };
+
+                    const accelLayout = {
+                        ...darkThemeLayout,
+                        title: 'Acceleration Data',
+                        xaxis: { title: 'Time (Tio)' },
+                        yaxis: { title: 'Acceleration' }
+                    };
+
+                    const gyroLayout = {
+                        ...darkThemeLayout,
+                        title: 'Gyroscooope Data',
+                        xaxis: { title: 'Time (Tio)' },
+                        yaxis: { title: 'Gyroscopppe' }
+                    };
+
+                    const UWBLayout = {
+                        ...darkThemeLayout,
+                        title: 'UWB Data',
+                        xaxis: { title: 'Time (Tio)' },
+                        yaxis: { title: 'UWB' }
+                    };
+
+            Plotly.newPlot('accelPlot', [
+                { x: [], y: [], mode: 'lines', name: 'Accel X' },
+                { x: [], y: [], mode: 'lines', name: 'Accel Y' },
+                { x: [], y: [], mode: 'lines', name: 'Accel Z' }
+            ], accelLayout);
+            Plotly.newPlot('gyroPlot', [
+                { x: [], y: [], mode: 'lines', name: 'Gyro X' },
+                { x: [], y: [], mode: 'lines', name: 'Gyro Y' },
+                { x: [], y: [], mode: 'lines', name: 'Gyro Z' }
+            ], gyroLayout);
+            Plotly.newPlot('UWBPlot', [
+                { x: [], y: [], mode: 'lines', name: '1th distance' },
+                { x: [], y: [], mode: 'lines', name: '2th distance' },
+                { x: [], y: [], mode: 'lines', name: '3th distance' }
+            ], UWBLayout);
+
+            const cycleCounterRange = document.getElementById('cycleCounterRange');
+            const batchSizeRange = document.getElementById('batchSizeRange');
+            const cycleCounterValue = document.getElementById('cycleCounterValue');
+            const batchSizeValue = document.getElementById('batchSizeValue');
+            const sendingRate = document.getElementById('sendingRate');
+
+            function calculateAndDisplaySendingRate() {
+            const cycleCounter = parseInt(cycleCounterRange.value, 10);
+            const batchSize = parseInt(batchSizeRange.value, 10);
+            const rate = cycleCounter * batchSize;
+            const Hz = 200 / cycleCounter;
+            sendingRate.textContent = `${rate} ms with rate of ${Hz} Hz`;
+        }
+            async function updateCycleCounter() {
+                const cycleCounter = cycleCounterRange.value;
+                cycleCounterValue.textContent = cycleCounter;
+                const response = await fetch('/update_cycle_counter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cycleCounter: parseInt(cycleCounter, 10) })
+                });
+                if (!response.ok) {
+                    alert('Failed to update cycle counter');
+                }
+            }
+
+            async function updateBatchSize() {
+                const batchSize = batchSizeRange.value;
+                batchSizeValue.textContent = batchSize;
+                const response = await fetch('/update_batch_size', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ batchSize: parseInt(batchSize, 10) })
+                });
+                if (!response.ok) {
+                    alert('Failed to update batch size');
+                }
+            }
+
+            cycleCounterRange.addEventListener('input', () => {
+                cycleCounterValue.textContent = cycleCounterRange.value;
+                updateCycleCounter();
+                // Initial calculation of the sending rate
+                calculateAndDisplaySendingRate();
+            });
+            
+            batchSizeRange.addEventListener('input', () => {
+                batchSizeValue.textContent = batchSizeRange.value;
+                updateBatchSize();
+                // Initial calculation of the sending rate
+                calculateAndDisplaySendingRate();
+        });
+        updateCycleCounter();
+        updateBatchSize();
+        calculateAndDisplaySendingRate();
+
+
+        });
+
+
+    // document.getElementById('cycleCounter').addEventListener('change', updateCycleCounter);
+    // document.getElementById('batchSize').addEventListener('change', updateBatchSize);
+
+    </script>
+</head>
+
+</html>

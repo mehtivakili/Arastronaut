@@ -77,9 +77,10 @@
         <div class="button-container">
             <button onclick="location.href='/firmware'">Firmware Installation</button>
             <button onclick="window.location.href='/calibration'">Calibration</button>
-            <button onclick="location.href='/data_acquisition'">Data Acquisition</button>
-            <form action="/python_serial" method="post">
-                <button type="submit" class="same-size">Python Serial Monitor</button>
+            <form action="/data_acquisition" method="post">
+                <button type="submit" class="same-size">IMU UDP</button>
+            </form>            <form action="/data_acquisition" method="post">
+                <button type="submit" class="same-size">Data Acquisition</button>
             </form>
             <!-- <button onclick="location.href='/python_UDP'">Python UDP</button> -->
 
