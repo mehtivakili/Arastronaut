@@ -513,6 +513,7 @@ def read_serial_data():
     timestamp = datetime.now().strftime("%Y%m%d%H%M")
     acc_filename = f"acc-{timestamp}.csv"
     gyro_filename = f"gyro-{timestamp}.csv"
+    imu_uwb_filename = f"imu_uwb-{timestamp}.csv"
     global createdFlag
     createdFlag = True
 
@@ -531,6 +532,7 @@ def read_serial_data():
     UWB_SEPARATOR = b'cba/'  # Assuming 'uwb/' is the separator for UWB data
     UWB_PACKET_SIZE = 16  # 4 bytes for Tio, 2 bytes for address, 4 bytes for distance, and 4 bytes for separator
     visible_device = False
+    address_ = "null"
 
     buffer = bytearray()
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -541,6 +543,8 @@ def read_serial_data():
     #     if serial_port.in_waiting > 0:
    
  #         buffer.extend(serial_port.read(serial_port.in_waiting))
+    address = 0
+    dist = 0
     print("why the ..")
     while udp_thread_running:
         # if(state == "imu"):
@@ -587,7 +591,6 @@ def read_serial_data():
                 buffer = buffer[end_index:]  # Remove the processed part from the buffer
 
                 if len(part) == 28:   
-
                     numbers = struct.unpack('<7f', part)
                     # Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
                     # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
@@ -600,10 +603,18 @@ def read_serial_data():
                     Tio = numbers[0] - offset
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
+                    # if(address != 0):
+                        # print(f"Address: {address}, Distance: {dist}, Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
                     # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
                     if calibration_enabled:
                         accel, gyro = apply_calibration(accel, gyro)
-
+                    if(address != 0):
+                        if(address == 130):
+                            dist1 = dist
+                        if(address == 131):
+                            dist2 = dist
+                        if(address == 133):
+                            dist3 = dist
                     # Initialize the first Tio and current second start
                     if last_Tio is None:
                         last_Tio = Tio
@@ -641,18 +652,29 @@ def read_serial_data():
                         if start_time != 0:
                             end_time = time.time()
                             if (end_time - start_time < Timer):
-                                formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                                formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+                                # formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                                # formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
 
-                                with open(acc_filename, mode='a', newline='') as acc_file:
-                                    acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    acc_writer.writerow(formatted_accel)
-                                with open(gyro_filename, mode='a', newline='') as gyro_file:
-                                    gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    gyro_writer.writerow(formatted_gyro)
+                                # with open(acc_filename, mode='a', newline='') as acc_file:
+                                #     acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                #     acc_writer.writerow(formatted_accel)
+                                # with open(gyro_filename, mode='a', newline='') as gyro_file:
+                                #     gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                #     gyro_writer.writerow(formatted_gyro)
+                                formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{address:.3e}, {dist:.4e}"]
+                                # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{dist1:.4e}", f"{dist2:.4e}", f"{dist3:.4e}"]
+
+                                print(formatted_imu_uwb)
+                                with open(imu_uwb_filename, mode='a', newline='') as imu_uwb_file:
+                                    imu_uwb_writer = csv.writer(imu_uwb_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                    imu_uwb_writer.writerow(formatted_imu_uwb)
+                                createdFlag = True
+
                             else:
                                 if createdFlag:
-                                    print(f"{acc_filename} and {gyro_filename} are created.")
+                                    # print(f"{acc_filename} and {gyro_filename} are created.")
+                                    print(f"{imu_uwb_filename} is created.")
+
                                     createdFlag = False
                         else:
                             start_time = time.time()
