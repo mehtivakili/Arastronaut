@@ -9,6 +9,7 @@ import serial
 import struct
 import threading 
 from threading import Thread
+from threading import Event
 import time
 import zlib
 import csv
@@ -73,13 +74,22 @@ gyro_bias = [4.53855, 4.001, -1.9779]
 # gyro_bias = [32777.1, 32459.8, 32511.8]
 
 # Control flag for the UDP listener thread
-udp_thread_running = False
+# udp_thread_running = False
+# udp_thread = None
+
+# udp_thread_running2 = False
+# udp_thread2 = None
+
+# udp_thread_running3 = False
+# udp_thread3 = None
+
+udp_thread_stop_event = Event()
 udp_thread = None
 
-udp_thread_running2 = False
+udp_thread2_stop_event = Event()
 udp_thread2 = None
 
-udp_thread_running3 = False
+udp_thread3_stop_event = Event()
 udp_thread3 = None
 
 def apply_calibration(accel, gyro):
@@ -123,26 +133,30 @@ def get_connected_ssid():
     except Exception as e:
         print(f"Could not get SSID: {e}")
         return "Unknown"
+    
+def start_udp_thread(target_function, stop_event):
+    global udp_thread, udp_thread2, udp_thread3
+
+    if stop_event.is_set():
+        stop_event.clear()  # Clear the event if it was set
+
+    thread = threading.Thread(target=target_function, args=(stop_event,))
+    thread.start()
+    return thread
+
+def stop_udp_thread(stop_event, thread):
+    stop_event.set()  # Signal the thread to stop
+    if thread:
+        thread.join()  # Wait for the thread to finish
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    global udp_thread_running, udp_thread2, udp_thread_running2, udp_thread, udp_thread_running3, udp_thread3
-    #     # Stop the UDP thread
-    udp_thread_running = False
-    udp_thread_running2 = False
-    udp_thread_running3 = False
-
-    if udp_thread2:
-            udp_thread2.join()
-            print("UDP thread2 stopped")
-
-    if udp_thread:
-            udp_thread.join()
-            print("UDP thread2 stopped")
-
-    if udp_thread3:
-            udp_thread3.join()
-            print("UDP thread3 stopped")
+    global udp_thread_running, udp_thread, udp_thread_running2, udp_thread2, udp_thread_running3, udp_thread3
+ 
+    stop_udp_thread(udp_thread_stop_event, udp_thread)
+    stop_udp_thread(udp_thread2_stop_event, udp_thread2)
+    stop_udp_thread(udp_thread3_stop_event, udp_thread3)
 
     network_info = get_network_info()
     return render_template('index.html', network_info=network_info)
@@ -186,31 +200,28 @@ def firmware():
     network_info = get_network_info()
     return render_template('firmware.html', network_info=network_info)
 
-
+# @app.before_request
+# def before_request():
+#     stop_udp_thread(udp_thread_stop_event, udp_thread)
+#     stop_udp_thread(udp_thread2_stop_event, udp_thread2)
+#     stop_udp_thread(udp_thread3_stop_event, udp_thread3)
+    
 @app.route('/data_acquisition', methods=['GET', 'POST'])
 def data_acquisition():
     global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
-    if request.method == 'POST':
-        # Start the UDP thread
-        udp_thread_running = True
-        state = "data_acquisition"
-        if udp_thread2:
-            udp_thread2.join()
-        if udp_thread:
-            udp_thread.join()
-        if udp_thread3:
-            udp_thread3.join()
+    stop_udp_thread(udp_thread3_stop_event, udp_thread3)  # Ensure the previous thread is stopped
 
-        udp_thread3 = threading.Thread(target=read_serial_data)
-        udp_thread3.start()
+    if request.method == 'POST':
+
+        udp_thread3 = start_udp_thread(read_serial_data, udp_thread3_stop_event)
         print("UDP thread started")
-    # elif request.method == 'POST':
-    #     # Stop the UDP thread
-    #     udp_thread_running = False
-    #     if udp_thread:
-    #         udp_thread.join()
-    #         print("UDP thread stopped")
-    
+
+    # if request.method == 'GET':
+    #     # stop_udp_thread(udp_thread3_stop_event, udp_thread3)  # Ensure the previous thread is stopped
+
+    #     udp_thread3 = start_udp_thread(read_serial_data, udp_thread3_stop_event)
+    #     print("UDP thread started")
+
     network_info = get_network_info()
     return render_template('data_acquisition.html', network_info=network_info)
 
@@ -338,25 +349,17 @@ def python_serial():
 def python_UDP():
     global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
     if request.method == 'POST':
-        # Start the UDP thread
-        udp_thread_running = True
-        state = "imu"
-        if udp_thread2:
-            udp_thread2.join()
-        if udp_thread:
-            udp_thread.join()
-        if udp_thread3:
-            udp_thread3.join()
+        stop_udp_thread(udp_thread2_stop_event, udp_thread2)  # Ensure the previous thread is stopped
 
-        udp_thread = threading.Thread(target=read_serial_data)
-        udp_thread.start()
+        udp_thread3 = start_udp_thread(read_serial_data, udp_thread2_stop_event)
         print("UDP thread started")
-    # elif request.method == 'POST':
-    #     # Stop the UDP thread
-    #     udp_thread_running = False
-    #     if udp_thread:
-    #         udp_thread.join()
-    #         print("UDP thread stopped")
+ 
+        # stop_udp_thread(udp_thread_stop_event, udp_thread)
+ 
+        # udp_thread = start_udp_thread(read_serial_data, udp_thread_stop_event)
+        # udp_thread.start()
+        # print("UDP thread started")
+ 
     
     network_info = get_network_info()
     return render_template('python_UDP.html', network_info=network_info)
@@ -498,7 +501,7 @@ def uwb_udp_listener():
     print("UDP listener thread2 terminated.")
 
 
-def read_serial_data():
+def read_serial_data(stop_event):
     print("read_serial_data started")
     global serial_running
     global last_Tio 
@@ -576,9 +579,11 @@ def read_serial_data():
     contor_uwb_view = 0
 
     print("why the ..")
-    while udp_thread_running:
+    while not stop_event.is_set():
         # if(state == "imu"):
-        if(True):
+        # if(True):
+        try:
+            sock.settimeout(1)
             data, addr = sock.recvfrom(4096)
             buffer.extend(data)
             # print(f"Buffer length: {len(buffer)}")
@@ -649,7 +654,7 @@ def read_serial_data():
 
                     contor_uwb_view = contor_uwb_view + 1
                     if contor_uwb_view > 100:
-                        print(f"{dist1:.2e}", f"{dist2:.2e}", f"{dist3:.2e}")
+                        # print(f"{dist1:.2e}", f"{dist2:.2e}", f"{dist3:.2e}")
                         contor_uwb_view = 0
                     # Initialize the first Tio and current second start
                     if last_Tio is None:
@@ -700,7 +705,7 @@ def read_serial_data():
                                 # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{address:.3e}, {dist:.4e}"]
                                 formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{dist1:.3e}", f"{dist2:.3e}", f"{dist3:.3e}"]
 
-                                print(formatted_imu_uwb)
+                                # print(formatted_imu_uwb)
                                 with open(imu_uwb_filename, mode='a', newline='') as imu_uwb_file:
                                     imu_uwb_writer = csv.writer(imu_uwb_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
                                     imu_uwb_writer.writerow(formatted_imu_uwb)
@@ -721,8 +726,9 @@ def read_serial_data():
                     print(f"Expected 28 bytes but received {len(parts)} bytes.")
                     break
 
-                
-        elif (state == "uwb"):
+        except socket.timeout:
+            continue
+        # elif (state == "uwb"):
                     # data, addr = sock.recvfrom(4096)
             current_time = time.time()
 
