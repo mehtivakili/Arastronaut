@@ -79,6 +79,9 @@ udp_thread = None
 udp_thread_running2 = False
 udp_thread2 = None
 
+udp_thread_running3 = False
+udp_thread3 = None
+
 def apply_calibration(accel, gyro):
     acce_calibrated = [
         ((int)(((Ka[0][0] * Ta[0][0]) + (Ka[0][1] * Ta[1][1]) + (Ka[0][2] * Ta[2][2])) * (accel[0] - acce_bias[0]) * 1000)) / 1000.0,
@@ -123,10 +126,11 @@ def get_connected_ssid():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    global udp_thread_running, udp_thread2, udp_thread_running2, udp_thread
+    global udp_thread_running, udp_thread2, udp_thread_running2, udp_thread, udp_thread_running3, udp_thread3
     #     # Stop the UDP thread
     udp_thread_running = False
-    udp_thread_running = False
+    udp_thread_running2 = False
+    udp_thread_running3 = False
 
     if udp_thread2:
             udp_thread2.join()
@@ -134,7 +138,11 @@ def index():
 
     if udp_thread:
             udp_thread.join()
-            print("UDP thread stopped")
+            print("UDP thread2 stopped")
+
+    if udp_thread3:
+            udp_thread3.join()
+            print("UDP thread3 stopped")
 
     network_info = get_network_info()
     return render_template('index.html', network_info=network_info)
@@ -190,6 +198,9 @@ def data_acquisition():
             udp_thread2.join()
         if udp_thread:
             udp_thread.join()
+        if udp_thread3:
+            udp_thread3.join()
+
         udp_thread3 = threading.Thread(target=read_serial_data)
         udp_thread3.start()
         print("UDP thread started")
@@ -230,13 +241,19 @@ def imu_calibration():
 
 @app.route('/uwb_udp', methods=['GET', 'POST'])
 def uwb_udp():
-    global udp_thread_running, udp_thread2, state, udp_thread
+    global udp_thread_running, udp_thread2, state, udp_thread, udp_thread3
     if request.method == 'POST':
         # Start the UDP thread
         udp_thread_running = True
         state = "uwb"
+        if udp_thread2:
+            udp_thread2.join()
         if udp_thread:
             udp_thread.join()
+        if udp_thread3:
+            udp_thread3.join()
+            
+
         udp_thread2 = threading.Thread(target=uwb_udp_listener)
         udp_thread2.start()
         print("UDP thread2 started")
@@ -319,13 +336,18 @@ def python_serial():
 #             return render_template('python_UDP.html', network_info=network_info)
 @app.route('/python_UDP', methods=['GET', 'POST'])
 def python_UDP():
-    global udp_thread_running, udp_thread, state, udp_thread2
+    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
     if request.method == 'POST':
         # Start the UDP thread
         udp_thread_running = True
         state = "imu"
         if udp_thread2:
             udp_thread2.join()
+        if udp_thread:
+            udp_thread.join()
+        if udp_thread3:
+            udp_thread3.join()
+
         udp_thread = threading.Thread(target=read_serial_data)
         udp_thread.start()
         print("UDP thread started")
@@ -545,6 +567,14 @@ def read_serial_data():
  #         buffer.extend(serial_port.read(serial_port.in_waiting))
     address = 0
     dist = 0
+
+    dist1 = 0
+    dist2 = 0
+    dist3 = 0
+
+    
+    contor_uwb_view = 0
+
     print("why the ..")
     while udp_thread_running:
         # if(state == "imu"):
@@ -608,13 +638,19 @@ def read_serial_data():
                     # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
                     if calibration_enabled:
                         accel, gyro = apply_calibration(accel, gyro)
-                    if(address != 0):
-                        if(address == 130):
-                            dist1 = dist
-                        if(address == 131):
-                            dist2 = dist
-                        if(address == 133):
-                            dist3 = dist
+                    # print(address)
+                    # if(address != 0):
+                    if(address == 130):
+                        dist1 = dist
+                    if(address == 131):
+                        dist2 = dist
+                    if(address == 133):
+                        dist3 = dist
+
+                    contor_uwb_view = contor_uwb_view + 1
+                    if contor_uwb_view > 100:
+                        print(f"{dist1:.2e}", f"{dist2:.2e}", f"{dist3:.2e}")
+                        contor_uwb_view = 0
                     # Initialize the first Tio and current second start
                     if last_Tio is None:
                         last_Tio = Tio
@@ -639,7 +675,7 @@ def read_serial_data():
                     # Check for Tio change and calculate rate
                     if int(Tio) != current_second_start:
                         # Print the rate for the last second
-                        print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
+                        # print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
 
                         # Reset the packet count for the new second
                         packets_count = 0
@@ -661,8 +697,8 @@ def read_serial_data():
                                 # with open(gyro_filename, mode='a', newline='') as gyro_file:
                                 #     gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
                                 #     gyro_writer.writerow(formatted_gyro)
-                                formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{address:.3e}, {dist:.4e}"]
-                                # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{dist1:.4e}", f"{dist2:.4e}", f"{dist3:.4e}"]
+                                # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{address:.3e}, {dist:.4e}"]
+                                formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{dist1:.3e}", f"{dist2:.3e}", f"{dist3:.3e}"]
 
                                 print(formatted_imu_uwb)
                                 with open(imu_uwb_filename, mode='a', newline='') as imu_uwb_file:
