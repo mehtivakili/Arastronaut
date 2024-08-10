@@ -4,9 +4,12 @@
 #include "BMI088.h"
 #include "DW1000.h"
 #include "DW1000Ranging.h"
+#include "QMC5883LCompass.h"
 
 Bmi088Accel accel(SPI, 32);
 Bmi088Gyro gyro(SPI, 25);
+
+QMC5883LCompass compass;
 
 int16_t accelX_raw, accelY_raw, accelZ_raw;
 int16_t gyroX_raw, gyroY_raw, gyroZ_raw;
@@ -54,14 +57,18 @@ enum Mode {
   IMU_ONLY = 0,
   UWB_CALIBRATION = 1,
   UWB_DATA = 2,
-  IMU_UWB_DATA = 3
+  IMU_UWB_DATA = 3,
+  COMPASS = 4,
+  IMU_COMPASS = 5,
+  IMU_UWB_COMPASS = 6
 };
 
 Mode currentMode = IMU_ONLY;
 
 const char* IMU_SEPARATOR = "abc/";
 const char* UWB_SEPARATOR = "cba/";
-
+const char* IMU_MAG_SEPARATOR = "img/";
+const char* MAG_SEPARATOR = "mag/";
 
 double myArray[7];
 typedef union {
@@ -74,6 +81,18 @@ typedef union {
   float floatingPoint;
   byte binary[4];
 } binaryFloat2;
+
+double myArray3[4];
+typedef union {
+  float floatingPoint;
+  byte binary[4];
+} binaryFloat3;
+
+double myArray4[10];
+typedef union {
+  float floatingPoint;
+  byte binary[4];
+} binaryFloat4;
 
 const char* check = "abc/";
 std::vector<uint8_t> batchData;
@@ -118,7 +137,19 @@ void handleModeChange() {
         currentMode = IMU_UWB_DATA;
         server.send(200, "text/plain", "Mode set to IMU_UWB_DATA");
         break;
-        
+      case COMPASS:
+        currentMode = COMPASS;
+        server.send(200, "text/plain", "Mode set to COMPASS");
+        break;
+      case IMU_COMPASS:
+        currentMode = IMU_COMPASS;
+        server.send(200, "text/plain", "Mode set to IMU_COMPASS");
+        break;
+      case IMU_UWB_COMPASS:
+        currentMode = IMU_UWB_COMPASS;
+        server.send(200, "text/plain", "Mode set to IMU_UWB_COMPASS");
+        break;
+
       default:
         server.send(400, "text/plain", "Invalid mode");
         break;
@@ -128,6 +159,52 @@ void handleModeChange() {
   }
 }
 
+void sendCompass() {
+  compass.read();
+
+  float tio_millis = static_cast<float>(millis());
+  Tio = tio_millis / 1000.0;
+
+  myArray3[0] = Tio;
+  myArray3[1] = compass.getX();
+  myArray3[2] = compass.getY();
+  myArray3[3] = compass.getZ();
+
+  Serial.print("X: ");
+  Serial.print(myArray3[1]);
+  Serial.print(" Y: ");
+  Serial.print(myArray3[2]);
+  Serial.print(" Z: ");
+  Serial.print(myArray3[3]);
+  Serial.println();
+  
+  delay(25);
+  
+  std::vector<uint8_t> magData;
+  // Add the MAG separator
+  magData.insert(magData.end(), MAG_SEPARATOR, MAG_SEPARATOR + strlen(MAG_SEPARATOR));
+
+  for (int i = 0; i < 4; i++) {
+    binaryFloat hi;
+    hi.floatingPoint = myArray3[i];
+    magData.insert(magData.end(), hi.binary, hi.binary + 4);
+  }
+
+  currentBatchCount++;
+    if (currentBatchCount >= batchSize) {
+
+    // Send the IMU data immediately
+    udp.beginPacket(udpAddress, udpPort);
+    udp.write(magData.data(), magData.size());
+    int result = udp.endPacket();
+    if (result == 1) {
+      // Serial.println("MAG data sent successfully");
+    } else {
+      Serial.print("Error sending MAG data: ");
+      Serial.println(result);
+    }
+  }
+}
 
 void sendIMUData() {
   float tio_millis = static_cast<float>(millis());
@@ -166,6 +243,49 @@ void sendIMUData() {
     }
   }
 }
+
+void sendIMU_MAG() {
+  float tio_millis = static_cast<float>(millis());
+  Tio = tio_millis / 1000.0;
+  compass.read();
+  myArray4[0] = Tio;
+  myArray4[1] = accelX_raw;
+  myArray4[2] = accelY_raw;
+  myArray4[3] = accelZ_raw;
+  myArray4[4] = gyroX_raw;
+  myArray4[5] = gyroY_raw;
+  myArray4[6] = gyroZ_raw;
+  myArray4[7] = compass.getX();
+  myArray4[8] = compass.getY();
+  myArray4[9] = compass.getZ();
+
+  std::vector<uint8_t> imuMag;
+
+  // Add the IMU separator
+  imuMag.insert(imuMag.end(), IMU_MAG_SEPARATOR, IMU_MAG_SEPARATOR + strlen(IMU_MAG_SEPARATOR));
+
+  for (int i = 0; i < 10; i++) {
+    binaryFloat hi;
+    hi.floatingPoint = myArray4[i];
+    imuMag.insert(imuMag.end(), hi.binary, hi.binary + 4);
+  }
+
+  currentBatchCount++;
+    if (currentBatchCount >= batchSize) {
+
+    // Send the IMU data immediately
+    udp.beginPacket(udpAddress, udpPort);
+    udp.write(imuMag.data(), imuMag.size());
+    int result = udp.endPacket();
+    if (result == 1) {
+      // Serial.println("IMU data sent successfully");
+    } else {
+      Serial.print("Error sending IMU MAG data: ");
+      Serial.println(result);
+    }
+  }
+}
+
 void newDevice(DW1000Device *device) {
   Serial.print("Device added: ");
   Serial.println(device->getShortAddress(), HEX);
@@ -260,7 +380,7 @@ void setup() {
   Serial.print("AP IP address: ");
   Serial.println(AP_IP);
 
-  
+  compass.init();
 
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
   DW1000Ranging.initCommunication(PIN_RST, PIN_SS, PIN_IRQ); //Reset, CS, IRQ pin
@@ -326,6 +446,33 @@ void loop() {
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
         gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
         sendIMUData();
+        delay(2);
+      }
+      DW1000Ranging.loop();
+      break;
+    
+    case COMPASS:
+      // compass.read();
+      sendCompass();
+      // delay(5);
+      break;
+
+    case IMU_COMPASS:
+        accel.readSensor();
+        gyro.readSensor();
+        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+        sendIMU_MAG();
+        delay(2);
+        break;
+
+    case IMU_UWB_COMPASS:
+        if (sendData) {
+        accel.readSensor();
+        gyro.readSensor();
+        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+        sendIMU_MAG();
         delay(2);
       }
       DW1000Ranging.loop();
