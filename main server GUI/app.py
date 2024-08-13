@@ -531,6 +531,7 @@ def read_serial_data(stop_event):
     end_time = 0
     time_IO = 0
     cycle_counter = 0  # Counter to keep track of cycles
+    mag_counter = 0
     # Send the 'c' character to request data
     # serial_port.write(check.encode())
     # with open('data_log.csv', mode='a', newline='') as file:
@@ -538,6 +539,7 @@ def read_serial_data(stop_event):
     timestamp = datetime.now().strftime("%Y%m%d%H%M")
     acc_filename = f"acc-{timestamp}.csv"
     gyro_filename = f"gyro-{timestamp}.csv"
+    mag_filename = f"mag-{timestamp}.csv"
     imu_uwb_filename = f"imu_uwb-{timestamp}.csv"
     global createdFlag
     createdFlag = True
@@ -550,7 +552,7 @@ def read_serial_data(stop_event):
     # most_recent_gyro_file = "test_imu_gyro.calib"
     # batch_size = 10
     batch_data = []
-    check = "abc/"
+    check = "img/"
     check_encoded = check.encode()
     check_length = len(check_encoded)
 
@@ -575,10 +577,13 @@ def read_serial_data(stop_event):
     dist2 = 0
     dist3 = 0
 
+    add = []
+
     
     contor_uwb_view = 0
 
     print("why the ..")
+    time.sleep(5)
     while not stop_event.is_set():
         # if(state == "imu"):
         # if(True):
@@ -613,20 +618,21 @@ def read_serial_data(stop_event):
                     
 
 
-            while len(buffer) >= 32:  # 4 bytes for the "abc/" and 28 bytes for the packet
+            while len(buffer) >= 44:  # 4 bytes for the "abc/" and 28 bytes for the packet
                 start_index = buffer.find(check_encoded)
                 if start_index == -1:
                     break  # "abc/" not found, wait for more data
 
-                end_index = start_index + len(check_encoded) + 28
+
+                end_index = start_index + len(check_encoded) + 40
                 if end_index > len(buffer):
                     break  # Not enough data for a full packet, wait for more data
 
                 part = buffer[start_index + len(check_encoded):end_index]
                 buffer = buffer[end_index:]  # Remove the processed part from the buffer
 
-                if len(part) == 28:   
-                    numbers = struct.unpack('<7f', part)
+                if len(part) == 40:   # 28 bytes for the packet (Tio accx accy accz gyrox gyroy gyroz) 4*7 + (magx magy magz) 4*3 = 40
+                    numbers = struct.unpack('<10f', part)
                     # Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
                     # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
                     
@@ -638,6 +644,9 @@ def read_serial_data(stop_event):
                     Tio = numbers[0] - offset
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
+                    mag = numbers[7:10]
+
+                    print (f"Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}, Mag: {mag}")
                     # if(address != 0):
                         # print(f"Address: {address}, Distance: {dist}, Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
                     # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
@@ -652,6 +661,24 @@ def read_serial_data(stop_event):
                     if(address == 133):
                         dist3 = dist
 
+                # # Dynamic addressing logic
+                # if address not in add:
+                #     add.append(address)
+                #     if len(add) == 3:
+                #         addSet = True
+                #     elif len(add) > 3:
+                #         add = add[:3]  # Ensure only 3 unique addresses are stored
+
+                # # Store distances based on address
+                # if addSet:
+                #     if address == add[0]:
+                #         dist1 = dist
+                #     elif address == add[1]:
+                #         dist2 = dist
+                #     elif address == add[2]:
+                #         dist3 = dist
+
+
                     contor_uwb_view = contor_uwb_view + 1
                     if contor_uwb_view > 100:
                         # print(f"{dist1:.2e}", f"{dist2:.2e}", f"{dist3:.2e}")
@@ -663,11 +690,19 @@ def read_serial_data(stop_event):
 
                     # Increment the cycle counter
                     cycle_counter += 1
+                    mag_counter += 1
+
+                    if mag_counter %30 == 0:
+                                formatted_mag = [f"{mag[0]:.7e}", f"{mag[1]:.7e}", f"{mag[2]:.7e}"]
+
+                                with open(mag_filename, mode='a', newline='') as mag_file:
+                                    mag_writer = csv.writer(mag_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                    mag_writer.writerow(formatted_mag)
 
                     # Emit data every 20 cycles
                     if cycle_counter >= cycle_counter_limit:
                         # Append data to batch
-                        batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                        batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro, 'mag': mag})
                         if len(batch_data) >= batch_size:
                             # Emit the batch of data
                             sio_client.emit('sensor_data', batch_data)
@@ -693,28 +728,28 @@ def read_serial_data(stop_event):
                         if start_time != 0:
                             end_time = time.time()
                             if (end_time - start_time < Timer):
-                                # formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                                # formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+                                formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                                formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
 
-                                # with open(acc_filename, mode='a', newline='') as acc_file:
-                                #     acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                #     acc_writer.writerow(formatted_accel)
-                                # with open(gyro_filename, mode='a', newline='') as gyro_file:
-                                #     gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                #     gyro_writer.writerow(formatted_gyro)
+                                with open(acc_filename, mode='a', newline='') as acc_file:
+                                    acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                    acc_writer.writerow(formatted_accel)
+                                with open(gyro_filename, mode='a', newline='') as gyro_file:
+                                    gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                    gyro_writer.writerow(formatted_gyro)
                                 # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{address:.3e}, {dist:.4e}"]
-                                formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{dist1:.3e}", f"{dist2:.3e}", f"{dist3:.3e}"]
+                                # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{dist1:.3e}", f"{dist2:.3e}", f"{dist3:.3e}"]
 
                                 # print(formatted_imu_uwb)
-                                with open(imu_uwb_filename, mode='a', newline='') as imu_uwb_file:
-                                    imu_uwb_writer = csv.writer(imu_uwb_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    imu_uwb_writer.writerow(formatted_imu_uwb)
-                                createdFlag = True
+                                # with open(imu_uwb_filename, mode='a', newline='') as imu_uwb_file:
+                                #     imu_uwb_writer = csv.writer(imu_uwb_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                #     imu_uwb_writer.writerow(formatted_imu_uwb)
+                                # createdFlag = True
 
                             else:
                                 if createdFlag:
-                                    # print(f"{acc_filename} and {gyro_filename} are created.")
-                                    print(f"{imu_uwb_filename} is created.")
+                                    print(f"{acc_filename} and {gyro_filename} are created.")
+                                    # print(f"{imu_uwb_filename} is created.")
 
                                     createdFlag = False
                         else:
