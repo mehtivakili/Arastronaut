@@ -265,11 +265,9 @@
     </div>
     <div class="main-container">
         <div class="side-container">
-            <button class="theme-toggle-button" onclick="toggleTheme()">Toggle Theme</button>
             <h2>UWB Device Information</h2>
-            <div id="uwb-device" class="uwb-device">
-                <div class="wifi-logo"></div>
-                <p id="device-address"></p>
+            <div id="uwb-devices-container">
+                <!-- Device information will be appended here -->
             </div>
         </div>
         <div class="serial-monitor">
@@ -278,39 +276,107 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="../static/js/socket.io.js"></script>
     <script>
-        const socket = io('http://localhost:3000',{transports:['websocket']});
-        // Debug: Check connection status
+        let devices = {};  // Stores the most recent data for each device
+        let recentAddresses = [];  // Stores the last 20 unique short_addresses
+        let lastReceivedTime = {}; // Stores the last received time for each address
+    
+        const MAX_RECENT_ADDRESSES = 20; // Maximum number of devices to track
+        const UPDATE_DELAY = 500; // Delay in milliseconds to update the UI
+        const DISCONNECT_TIMEOUT = 3000; // Time in milliseconds to consider a device disconnected
+    
+        const socket = io('http://localhost:3000', {transports: ['websocket']});
+    
         socket.on('connect', () => {
             console.log('Connected to server');
         });
-
+    
         socket.on('disconnect', () => {
             console.log('Disconnected from server');
         });
-
+    
         socket.on('connect_error', (error) => {
             console.error('Connection error:', error);
         });
+    
         socket.on('uwb_data', function(data) {
-            console.log(data)
-            const deviceDiv = document.getElementById('uwb-device');
-            const addressP = document.getElementById('device-address');
-            addressP.innerText = 'Device Address: ' + data.short_address;
-
-            if (data.visible) {
-                deviceDiv.classList.add('visible');
-            } else {
-                deviceDiv.classList.remove('visible');
+            console.log('Received data:', data);
+    
+            // Update the devices object and last received time
+            devices[data.short_address] = data;
+            lastReceivedTime[data.short_address] = Date.now();
+            console.log('Updated devices object:', devices);
+    
+            // Add to the recentAddresses array if it's a new address
+            if (!recentAddresses.includes(data.short_address)) {
+                recentAddresses.push(data.short_address);
+                console.log('Added new short_address:', data.short_address);
             }
+    
+            // Maintain only the last MAX_RECENT_ADDRESSES entries
+            if (recentAddresses.length > MAX_RECENT_ADDRESSES) {
+                const removedAddress = recentAddresses.shift();
+                delete devices[removedAddress];
+                delete lastReceivedTime[removedAddress];
+                console.log('Removed old short_address:', removedAddress);
+            }
+    
+            // Update the UI after a short delay to debounce rapid changes
+            setTimeout(() => {
+                updateDeviceList();
+            }, UPDATE_DELAY);
         });
-
+    
+        function updateDeviceList() {
+            const devicesContainer = document.getElementById('uwb-devices-container');
+            
+            if (!devicesContainer) {
+                console.error("Container element 'uwb-devices-container' not found.");
+                return;
+            }
+    
+            // Sort the recent addresses incrementally
+            const sortedAddresses = recentAddresses.sort((a, b) => a - b);
+            console.log('Sorted addresses:', sortedAddresses);
+    
+            // Iterate over each device and update or create a new row
+            sortedAddresses.forEach(address => {
+                const device = devices[address];
+                const isDisconnected = Date.now() - lastReceivedTime[address] > DISCONNECT_TIMEOUT;
+                console.log(`Updating UI for device ${address} with data:`, device);
+                
+                let deviceDiv = document.getElementById(`device-${address}`);
+    
+                if (!deviceDiv) {
+                    // If the device row doesn't exist, create a new one
+                    deviceDiv = document.createElement('div');
+                    deviceDiv.id = `device-${address}`;
+                    deviceDiv.className = 'uwb-device visible';
+                    devicesContainer.appendChild(deviceDiv);
+                    console.log(`Created new device row for address ${address}`);
+                }
+    
+                // Update the device information in the row
+                deviceDiv.innerHTML = `
+                    <div class="wifi-logo" style="background-image: url('/static/${isDisconnected ? 'disconnected_logo.png' : 'connected_logo.png'}');"></div>
+                    <p>Device Address: ${device.short_address}</p>
+                    <p>Distance: ${device.distance.toFixed(2)} meters</p>
+                `;
+                console.log(`Updated UI for device ${address}, disconnected: ${isDisconnected}`);
+            });
+        }
+    
+        // Periodically check for disconnected devices
+        setInterval(() => {
+            updateDeviceList();
+        }, DISCONNECT_TIMEOUT / 2);
+    
         window.addEventListener('beforeunload', function (event) {
             // Send a synchronous request to stop the UDP listener
             navigator.sendBeacon('/uwb_udp', '');
         });
     </script>
-</body>
+    </body>
 </html>
 

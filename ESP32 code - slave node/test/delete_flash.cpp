@@ -7,7 +7,7 @@ const char* plotPage = R"rawliteral(
 <head>
   <title>ESP32 IMU and Gyro Plotter</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="../static/js/plotly-latest.min.js"></script>
 
 <style>
   body { font-family: Arial, sans-serif; display: flex; }

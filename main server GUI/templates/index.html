@@ -4,7 +4,7 @@
     <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
     <link rel="stylesheet" href="../static/style.css">
 
-    <!-- <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> -->
+    <!-- <script src="../static/js/plotly-latest.min.js"></script> -->
     <script src="../static/particles.js"></script>
     <script src="../static/js/theme.js"></script>
     <meta charset="UTF-8">
@@ -33,6 +33,10 @@
             z-index: -1;
         }
         .theme-toggle-button {
+            top: 10px;
+            left: 10px;
+            position: absolute;
+            width: 120px;
             background-color: #00b300;
             color: white;
             padding: 10px 20px;
@@ -43,7 +47,6 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             transition: background-color 0.3s, box-shadow 0.3s;
             margin: 10px;
-            width: 200px;
         }
 
         .theme-toggle-button:hover {
@@ -69,9 +72,10 @@
         Local IP: {{ network_info.local_ip }}<br>
         SSID: {{ network_info.ssid }}
     </div>
+    <button class="theme-toggle-button" onclick="toggleTheme()">Toggle Theme</button>
+
     <div class="container">
             <!-- Include the theme toggle button -->
-            <button class="theme-toggle-button" onclick="toggleTheme()">Toggle Theme</button>
 
         <h1>Welcome to the Arastronaut panel</h1>
         <div class="button-container">
@@ -83,9 +87,6 @@
             </form>
             <!-- <button onclick="location.href='/python_UDP'">Python UDP</button> -->
 
-            <form action="/python_UDP" method="post">
-                <button type="submit" class="same-size">IMU UDP</button>
-            </form>
             
             <form action="/uwb_udp" method="post">
                 <button type="submit" class="same-size">UWB UDP</button>

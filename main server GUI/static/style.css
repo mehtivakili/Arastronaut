@@ -163,3 +163,20 @@ body.light-theme ::-webkit-scrollbar-thumb {
 body.light-theme * {
     scrollbar-color: var(--scrollbar-thumb-light) var(--scrollbar-track-light); /* Thumb color, track color */
 }
+
+.theme-toggle-button {
+    top: 10px;
+    left: 10px;
+    position: absolute;
+    width: 120px;
+    background-color: #00b300;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 16px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: background-color 0.3s, box-shadow 0.3s;
+    margin: 10px;
+}

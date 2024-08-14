@@ -1,5 +1,5 @@
     //  <script src="http://192.168.4.2:5000>/static/js/plotly-latest.min.js"></script>  
-    //  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    //  <script src="../static/js/plotly-latest.min.js"></script>
     // <script src="/plotly-latest.min.js"></script>
    // <script src="http://%FLASK_SERVER_IP%:5000/static/js/plotly-latest.min.js"></script>    
 
@@ -11,7 +11,7 @@ const char* plotPage = R"rawliteral(
 <head>
   <title>ESP32 IMU and Gyro Plotter</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="../static/js/plotly-latest.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IMU Configuration</title>

@@ -235,10 +235,11 @@ def calibration():
 #     network_info = get_network_info()
 #     return render_template('calibration.html', network_info=network_info)
 
-@app.route('/imu_calibration')
-def imu_calibration():
-    network_info = get_network_info()
-    return render_template('imu_calibration.html', network_info=network_info)
+# @app.route('/imu_calibration')
+# def imu_calibration():
+#     network_info = get_network_info()
+#     return render_template('imu_calibration.html', network_info=network_info)
+
 
 # @app.route('/uwb_udp')
 # def uwb_udp():
@@ -250,23 +251,16 @@ def imu_calibration():
 
 #     return render_template('uwb_udp.html', network_info=network_info)
 
-@app.route('/uwb_udp', methods=['GET', 'POST'])
+@app.route('/uwb_calibration', methods=['GET', 'POST'])
 def uwb_udp():
     global udp_thread_running, udp_thread2, state, udp_thread, udp_thread3
+    stop_udp_thread(udp_thread3_stop_event, udp_thread3)  # Ensure the previous thread is stopped
+
     if request.method == 'POST':
         # Start the UDP thread
-        udp_thread_running = True
-        state = "uwb"
-        if udp_thread2:
-            udp_thread2.join()
-        if udp_thread:
-            udp_thread.join()
-        if udp_thread3:
-            udp_thread3.join()
             
 
-        udp_thread2 = threading.Thread(target=uwb_udp_listener)
-        udp_thread2.start()
+        udp_thread3 = start_udp_thread(uwb_udp_listener, udp_thread3_stop_event)
         print("UDP thread2 started")
     # elif request.method == 'POST':
     #     # Stop the UDP thread
@@ -276,7 +270,7 @@ def uwb_udp():
     #         print("UDP thread2 stopped")
     
     network_info = get_network_info()
-    return render_template('uwb_udp.html', network_info=network_info)
+    return render_template('uwb_calibration.html', network_info=network_info)
 
 
 
@@ -286,10 +280,10 @@ def magnometer_calibration():
     network_info = get_network_info()
     return render_template('magnometer_calibration.html', network_info=network_info)
 
-@app.route('/uwb_calibration')
-def uwb_calibration():
-    network_info = get_network_info()
-    return render_template('uwb_calibration.html', network_info=network_info)
+# @app.route('/uwb_calibration')
+# def uwb_calibration():
+#     network_info = get_network_info()
+#     return render_template('uwb_calibration.html', network_info=network_info)
 
 @app.route('/update_cycle_counter', methods=['POST'])
 def update_cycle_counter():
@@ -345,14 +339,14 @@ def python_serial():
  
 #             network_info = get_network_info()
 #             return render_template('python_UDP.html', network_info=network_info)
-@app.route('/python_UDP', methods=['GET', 'POST'])
-def python_UDP():
+@app.route('/imu_calibration', methods=['GET', 'POST'])
+def imu_calib():
     global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
     if request.method == 'POST':
         stop_udp_thread(udp_thread2_stop_event, udp_thread2)  # Ensure the previous thread is stopped
 
-        udp_thread3 = start_udp_thread(read_serial_data, udp_thread2_stop_event)
-        print("UDP thread started")
+        udp_thread2 = start_udp_thread(read_serial_data, udp_thread2_stop_event)
+        print("IMU calib thread started")
  
         # stop_udp_thread(udp_thread_stop_event, udp_thread)
  
@@ -362,7 +356,7 @@ def python_UDP():
  
     
     network_info = get_network_info()
-    return render_template('python_UDP.html', network_info=network_info)
+    return render_template('imu_calibration.html', network_info=network_info)
 
 # @app.route('/device-orientation', methods=['GET', 'POST'])
 # def device_orientation():
@@ -449,8 +443,7 @@ def calculate_checksum(data):
 offset = 0
 from datetime import datetime
 
-def uwb_udp_listener():
-    global udp_thread_running2
+def uwb_udp_listener(stop_event2):
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
@@ -459,43 +452,65 @@ def uwb_udp_listener():
 
     last_received_time = time.time()
     visible_device = False
+
+    buffer = bytearray()
+    UWB_SEPARATOR= b'cba/'
     
-    while udp_thread_running2:
-        data, addr = sock.recvfrom(4096)
-        current_time = time.time()
+    while not stop_event2.is_set():
+        try:
+            sock.settimeout(10)
 
-        if data.startswith(b'cba/'):
-        # if True:
-            tio = struct.unpack('f', data[4:8])[0]
-            short_address = struct.unpack('f', data[8:12])[0]
-            distance = struct.unpack('f', data[12:16])[0]
+            data, addr = sock.recvfrom(4096)
+            buffer.extend(data)
+            current_time = time.time()
 
-            uwb_data = {
-                'time': tio,
-                'short_address': short_address,
-                'distance': distance,
-                'visible': True
-            }
-            # uwb_data = {
-            #     'time': "tio",
-            #     'short_address': "short_address",
-            #     'distance': "distance",
-            #     'visible': True
-            # }
-            print(uwb_data)
-            sio_client.emit('uwb_data', uwb_data)
-            # socketio.emit('uwb_data', uwb_data)
-            last_received_time = current_time
-            visible_device = True
-            # print("uwb data sent!!!!!!!")
-        elif visible_device and (current_time - last_received_time > 3):
-            uwb_data = {
-                'visible': False
-            }
-            # sio2_client.emit('uwb_data', uwb_data)
+            while len(buffer) >= 16:
+                start_index = buffer.find(UWB_SEPARATOR)
+                if start_index == -1:
+                    break  # UWB separator not found, wait for more data
 
-            socketio.emit('uwb_data', uwb_data)
-            visible_device = False
+                end_index = start_index + len(UWB_SEPARATOR) + 12  # 12 bytes for the UWB data
+                if end_index > len(buffer):
+                    break  # Not enough data for a full UWB packet, wait for more data
+
+                part = buffer[start_index + len(UWB_SEPARATOR):end_index]
+                buffer = buffer[end_index:]  # Remove the processed part from the buffer
+
+                if len(part) == 12:  # 12 bytes: 4 for Tio, 2 for address, 4 for distance
+                    # Tio, address, dist = struct.unpack('<3f', part)
+
+                    tio = struct.unpack('f', data[4:8])[0]
+                    short_address = struct.unpack('f', data[8:12])[0]
+                    distance = struct.unpack('f', data[12:16])[0]
+
+                    uwb_data = {
+                        'time': tio,
+                        'short_address': short_address,
+                        'distance': distance,
+                        'visible': True
+                    }
+                    # uwb_data = {
+                    #     'time': "tio",
+                    #     'short_address': "short_address",
+                    #     'distance': "distance",
+                    #     'visible': True
+                    # }
+                    print(uwb_data)
+                    sio_client.emit('uwb_data', uwb_data)
+                    # socketio.emit('uwb_data', uwb_data)
+                    last_received_time = current_time
+                    visible_device = True
+                    # print("uwb data sent!!!!!!!")
+                elif visible_device and (current_time - last_received_time > 3):
+                    uwb_data = {
+                        'visible': False
+                    }
+                    # sio2_client.emit('uwb_data', uwb_data)
+
+                    socketio.emit('uwb_data', uwb_data)
+                    visible_device = False
+        except socket.timeout:
+            continue
 
     sock.close()
     print("UDP listener thread2 terminated.")

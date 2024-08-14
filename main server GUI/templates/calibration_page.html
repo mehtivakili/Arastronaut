@@ -30,6 +30,10 @@
             z-index: -1;
         }
         .theme-toggle-button {
+            top: 10px;
+            left: 10px;
+            position: absolute;
+            width: 120px;
             background-color: #00b300;
             color: white;
             padding: 10px 20px;
@@ -65,18 +69,21 @@
         Local IP: {{ network_info.local_ip }}<br>
         SSID: {{ network_info.ssid }}
     </div>
+    <button class="theme-toggle-button" onclick="toggleTheme()">Toggle Theme</button>
+
     <div class="container">
             <!-- Include the theme toggle button -->
-            <button class="theme-toggle-button" onclick="toggleTheme()">Toggle Theme</button>
 
         <h1>   Sensor Calibration   </h1>
         <div class="button-container">
-            <form action="/python_serial" method="post">
-                <button type="submit">IMU Calibration</button>
+
+            <form action="/imu_calibration" method="post">
+                <button type="submit" class="same-size">IMU Calibration</button>
             </form>
             <button onclick="location.href='/magnometer_calibration'">Magnometer Calibration</button>
-            <button onclick="location.href='/uwb_calibration'">UWB Calibration</button>
-            <button class="back-button" onclick="location.href='/'">Back</button>
+            <form action="/uwb_calibration" method="post">
+                <button type="submit" class="same-size">UWB Calibration</button>
+            </form>            <button class="back-button" onclick="location.href='/'">Back</button>
         </div>
     </div>
     <script>
