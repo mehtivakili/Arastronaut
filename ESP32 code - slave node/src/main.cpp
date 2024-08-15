@@ -440,14 +440,14 @@ void loop() {
       break;
 
     case IMU_UWB_DATA:
-      if (sendData) {
+      // if (sendData) {
         accel.readSensor();
         gyro.readSensor();
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
         gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
         sendIMUData();
         delay(2);
-      }
+      // }
       DW1000Ranging.loop();
       break;
     
@@ -467,16 +467,16 @@ void loop() {
         break;
 
     case IMU_UWB_COMPASS:
-        if (sendData) {
+        // if (sentrudData) {
         accel.readSensor();
         gyro.readSensor();
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
         gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
         sendIMU_MAG();
         delay(2);
-      }
-      DW1000Ranging.loop();
-      break;
+      // }
+        DW1000Ranging.loop();
+        break;
 
     default:
       break;

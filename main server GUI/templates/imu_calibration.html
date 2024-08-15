@@ -781,7 +781,7 @@ body.light-theme .collapsible-toggle:hover {
             
             const { Tio, accel, gyro, mag } = data;
             updateOrientation(accel, gyro, mag);
-            contor += 1;
+            // contor += 1;
             // console.log('Received data:', Tio, accel, gyro); // Debug statement
             // console.log(contor)
             TioData.push(Tio);
@@ -841,10 +841,10 @@ body.light-theme .collapsible-toggle:hover {
                 x: [[]],
                 y: [[], [], []]
             });
-            Plotly.update('UWBPlot', {
-                x: [[]],
-                y: [[], [], []]
-            })
+            // Plotly.update('UWBPlot', {
+            //     x: [[]],
+            //     y: [[], [], []]
+            // })
         }
 
         // function toggleCollapsible(header) {
@@ -1326,12 +1326,12 @@ window.addEventListener('beforeunload', function (event) {
                         yaxis: { title: 'Gyroscope' }
                     };
 
-                    const UWBLayout = {
-                        ...darkThemeLayout,
-                        title: 'UWB Data',
-                        xaxis: { title: 'Time (Tio)' },
-                        yaxis: { title: 'UWB' }
-                    };
+                    // const UWBLayout = {
+                    //     ...darkThemeLayout,
+                    //     title: 'UWB Data',
+                    //     xaxis: { title: 'Time (Tio)' },
+                    //     yaxis: { title: 'UWB' }
+                    // };
 
             Plotly.newPlot('accelPlot', [
                 { x: [], y: [], mode: 'lines', name: 'Accel X' },
@@ -1343,11 +1343,11 @@ window.addEventListener('beforeunload', function (event) {
                 { x: [], y: [], mode: 'lines', name: 'Gyro Y' },
                 { x: [], y: [], mode: 'lines', name: 'Gyro Z' }
             ], gyroLayout);
-            Plotly.newPlot('UWBPlot', [
-                { x: [], y: [], mode: 'lines', name: '1th distance' },
-                { x: [], y: [], mode: 'lines', name: '2th distance' },
-                { x: [], y: [], mode: 'lines', name: '3th distance' }
-            ], UWBLayout);
+            // Plotly.newPlot('UWBPlot', [
+            //     { x: [], y: [], mode: 'lines', name: '1th distance' },
+            //     { x: [], y: [], mode: 'lines', name: '2th distance' },
+            //     { x: [], y: [], mode: 'lines', name: '3th distance' }
+            // ], UWBLayout);
 
             const cycleCounterRange = document.getElementById('cycleCounterRange');
             const batchSizeRange = document.getElementById('batchSizeRange');
@@ -1413,8 +1413,8 @@ window.addEventListener('beforeunload', function (event) {
         });
 
 
-    // document.getElementById('cycleCounter').addEventListener('change', updateCycleCounter);
-    // document.getElementById('batchSize').addEventListener('change', updateBatchSize);
+    document.getElementById('cycleCounter').addEventListener('change', updateCycleCounter);
+    document.getElementById('batchSize').addEventListener('change', updateBatchSize);
 
     </script>
 </head>

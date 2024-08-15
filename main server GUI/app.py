@@ -44,6 +44,14 @@ UDP_IP = "0.0.0.0"  # Listen on all available interfaces
 UDP_PORT = 12346  # Port to bind the UDP socket
 global sock
 
+off1 = 0
+off2 = 0
+off3 = 0
+
+dist1 = 0
+dist2 = 0
+dist3 = 0
+
 # sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
 
@@ -285,6 +293,10 @@ def magnometer_calibration():
 #     network_info = get_network_info()
 #     return render_template('uwb_calibration.html', network_info=network_info)
 
+# @app.route('/uwb_precalib_param', methods= ['POST'])
+# def uwb_precalib_param():
+#     global 
+
 @app.route('/update_cycle_counter', methods=['POST'])
 def update_cycle_counter():
     global cycle_counter_limit
@@ -299,11 +311,15 @@ def update_batch_size():
     batch_size = data.get('batchSize', batch_size)
     return jsonify({'status': 'success', 'batchSize': batch_size})
 
-@app.route('/device_orientation')
+@app.route('/device_orientation', methods=['POST'])
 def device_orientation():
-    global udp_thread3
-    udp_thread3 = threading.Thread(target=read_serial_data)
-    udp_thread3.start()
+    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
+    stop_udp_thread(udp_thread3_stop_event, udp_thread3)  # Ensure the previous thread is stopped
+
+    if request.method == 'POST':
+
+        udp_thread3 = start_udp_thread(read_serial_data, udp_thread3_stop_event)
+        print("UDP thread started")
     network_info = get_network_info
     return render_template('device_orientation.html', network_info=network_info)
 
@@ -455,13 +471,24 @@ def uwb_udp_listener(stop_event2):
 
     buffer = bytearray()
     UWB_SEPARATOR= b'cba/'
+
+    lock = threading.Lock()
+
+    global off1, off2, off3
+    global dist1, dist2, dist3
     
     while not stop_event2.is_set():
+        # with lock:
+        #     off1_ = off1
+        #     off2_ = off2
+        #     off3_ = off3
         try:
             sock.settimeout(10)
 
             data, addr = sock.recvfrom(4096)
             buffer.extend(data)
+            print(f"Buffer length: {len(buffer)}")
+
             current_time = time.time()
 
             while len(buffer) >= 16:
@@ -479,23 +506,61 @@ def uwb_udp_listener(stop_event2):
                 if len(part) == 12:  # 12 bytes: 4 for Tio, 2 for address, 4 for distance
                     # Tio, address, dist = struct.unpack('<3f', part)
 
-                    tio = struct.unpack('f', data[4:8])[0]
-                    short_address = struct.unpack('f', data[8:12])[0]
+                    Tio = struct.unpack('f', data[4:8])[0]
+                    address = struct.unpack('f', data[8:12])[0]
                     distance = struct.unpack('f', data[12:16])[0]
 
-                    uwb_data = {
-                        'time': tio,
-                        'short_address': short_address,
-                        'distance': distance,
+
+                    # print(off1_, off2_, off3_)
+
+                    uwb_data1 = {
+                        'time': Tio,
+                        'short_address': address,
+                        'distance': distance - off1,
                         'visible': True
                     }
+                    
+                    uwb_data2 = {
+                        'time': Tio,
+                        'short_address': address,
+                        'distance': distance - off2,
+                        'visible': True
+                    }
+                    
+                    uwb_data3 = {
+                        'time': Tio,
+                        'short_address': address,
+                        'distance': distance - off3,
+                        'visible': True
+                    }
+
+                if address == 130:
+                    # print(uwb_data1)
+                    dist1 = distance
+                    sio_client.emit('uwb_data', uwb_data1)                
+                elif address == 131:
+                    # print(uwb_data2)
+                    dist2 = distance
+                    sio_client.emit('uwb_data', uwb_data2)                
+                elif address == 133:
+                    # print(uwb_data3)
+                    dist3 = distance
+                    sio_client.emit('uwb_data', uwb_data3)
+
+                    # uwb_data = {
+                    #     'time': Tio,
+                    #     'short_address': address,
+                    #     'distance': distance,
+                    #     'visible': True
+                    # }
+
                     # uwb_data = {
                     #     'time': "tio",
                     #     'short_address': "short_address",
                     #     'distance': "distance",
                     #     'visible': True
                     # }
-                    print(uwb_data)
+                    # print(uwb_data)
                     sio_client.emit('uwb_data', uwb_data)
                     # socketio.emit('uwb_data', uwb_data)
                     last_received_time = current_time
@@ -515,6 +580,50 @@ def uwb_udp_listener(stop_event2):
     sock.close()
     print("UDP listener thread2 terminated.")
 
+@app.route('/set_uwb_offset', methods=['POST'])
+def set_uwb_offset():
+    global off1, off2, off3
+    global dist1, dist2, dist3
+
+    # Get the address and offset from the form data
+    data = request.get_json()
+    address = data.get('address')
+    offset = data.get('offset')
+
+    print(address, offset)
+
+    if address is not None and offset is not None:
+        try:
+            # Convert offset to the appropriate type, if necessary
+            offset = float(offset)
+            address = int(address)  # Ensure address is an integer
+
+            
+            # Now you can use `address` and `offset` as needed
+            print(f"Received Address: {address}, Offset: {offset}")
+
+            
+
+            if address == 130:
+                off1 = dist1 - offset
+                print(off1)
+            elif address == 131:
+                off2 = dist2 - offset
+            elif address == 133:
+                off3 = dist3 - offset
+
+            # Here you can implement your logic to set the offset
+            # For example, update global variables or trigger calibration
+            global set_offset, calibration_offset, calibration_address
+            calibration_address = address
+            calibration_offset = offset
+            set_offset = True
+
+            return jsonify(status='success')
+        except ValueError:
+            return "Invalid offset value", 400
+    else:
+        return "Missing address or offset", 400
 
 def read_serial_data(stop_event):
     print("read_serial_data started")
@@ -588,11 +697,12 @@ def read_serial_data(stop_event):
     address = 0
     dist = 0
 
-    dist1 = 0
-    dist2 = 0
-    dist3 = 0
+    global dist1, dist2, dist3
 
     add = []
+
+    global off1, off2, off3
+
 
     
     contor_uwb_view = 0
@@ -603,10 +713,10 @@ def read_serial_data(stop_event):
         # if(state == "imu"):
         # if(True):
         try:
-            sock.settimeout(1)
+            sock.settimeout(10)
             data, addr = sock.recvfrom(4096)
             buffer.extend(data)
-            # print(f"Buffer length: {len(buffer)}")
+            print(f"Buffer length: {len(buffer)}")
 
             # Process UWB data
             while len(buffer) >= UWB_PACKET_SIZE:
@@ -624,12 +734,17 @@ def read_serial_data(stop_event):
                 if len(part) == 12:  # 12 bytes: 4 for Tio, 2 for address, 4 for distance
                     Tio, address, dist = struct.unpack('<3f', part)
 
-                    if not set_offset:
-                        offset = Tio
-                        set_offset = True
+    
+
+                    if address == 130:
+                        sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off1})
+                    elif address == 131:
+                        sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off2})
+                    elif address == 133:
+                        sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off3})
 
                     # print(f"UWB Data - Tio: {Tio:.3f}, Address: {address}, Distance: {dist:.2f}")
-                    sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist})
+                    # sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist})
                     
 
 

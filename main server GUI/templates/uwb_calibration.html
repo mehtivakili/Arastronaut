@@ -265,8 +265,23 @@
     </div>
     <div class="main-container">
         <div class="side-container">
+            <div>
+                <h2>UWB Calibration</h2>
+                <form style="width: 100%;" id="calibration-form">
+                    <div class="input-group">
+                        <label for="address">Device Address:</label>
+                        <input type="text" id="address" name="address" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="offset">Measured Value:</label>
+                        <input type="number" id="offset" name="offset" required>
+                    </div>
+                    <button type="submit">Set Offset</button>
+                </form>
+                <!-- <div id="response-message"></div> To show response message             -->
+            </div>
             <h2>UWB Device Information</h2>
-            <div id="uwb-devices-container">
+            <div style="padding-left: 35%;" id="uwb-devices-container">
                 <!-- Device information will be appended here -->
             </div>
         </div>
@@ -278,6 +293,37 @@
     </div>
     <script src="../static/js/socket.io.js"></script>
     <script>
+
+        document.getElementById('calibration-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+            
+            const address = document.getElementById('address').value;
+            const offset = document.getElementById('offset').value;
+
+            // Prepare the data to be sent
+            const data = {
+                address: address,
+                offset: offset
+            };
+
+            // Send the POST request using fetch
+            fetch('/set_uwb_offset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.text()) // Parse the response as text
+            .then(result => {
+                document.getElementById('response-message').innerText = result;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('response-message').innerText = 'Error setting offset';
+            });
+        });
+
         let devices = {};  // Stores the most recent data for each device
         let recentAddresses = [];  // Stores the last 20 unique short_addresses
         let lastReceivedTime = {}; // Stores the last received time for each address

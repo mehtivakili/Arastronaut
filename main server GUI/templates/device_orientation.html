@@ -18,27 +18,28 @@
             overflow: hidden;
         }
         .box {
-            width: 100px;
+            width: 200px;
             height: 100px;
-            background-color: #00b300;
+            background-color: transparent;
             transform-style: preserve-3d;
             transform-origin: center;
             transform: perspective(500px);
             transition: transform 0.1s linear;
+            position: relative;
         }
         .face {
             position: absolute;
-            width: 100px;
+            width: 200px;
             height: 100px;
             background: rgba(255, 255, 255, 0.8);
             border: 1px solid #ccc;
         }
-        .face.front  { transform: translateZ(50px); }
-        .face.back   { transform: rotateY(180deg) translateZ(50px); }
-        .face.left   { transform: rotateY(-90deg) translateZ(50px); }
-        .face.right  { transform: rotateY(90deg) translateZ(50px); }
-        .face.top    { transform: rotateX(90deg) translateZ(50px); }
-        .face.bottom { transform: rotateX(-90deg) translateZ(50px); }
+        .face.front  { transform: translateZ(50px); background-color: #ff0000; } /* Red */
+        .face.back   { transform: rotateY(180deg) translateZ(50px); background-color: #ff0000; } /* Red */
+        .face.left   { width: 100px; height: 100px; transform: rotateY(-90deg) translateZ(100px); background-color: #0000ff; } /* Blue */
+        .face.right  { width: 100px; height: 100px; transform: rotateY(90deg) translateZ(100px); background-color: #0000ff; } /* Blue */
+        .face.top    { height: 100px; width: 200px; transform: rotateX(90deg) translateZ(50px); background-color: #ffff00; } /* Yellow */
+        .face.bottom { height: 100px; width: 200px; transform: rotateX(-90deg) translateZ(50px); background-color: #ffff00; } /* Yellow */
     </style>
 </head>
 <body>
@@ -72,21 +73,22 @@
                 console.log(batch);
                 const accel = data.accel;
                 const gyro = data.gyro;
-                updateOrientation(accel, gyro);
+                const mag = data.mag;
+                updateOrientation(accel, gyro, mag);
             });
         });
 
         const box = document.getElementById('box');
         let currentRotation = {alpha: 0, beta: 0, gamma: 0};
 
-        function updateOrientation(accel, gyro) {
+        function updateOrientation(accel, gyro, mag) {
             const alpha = Math.atan2(accel[1], accel[2]) * 180 / Math.PI;
             const beta = Math.atan2(-accel[0], Math.sqrt(accel[1] * accel[1] + accel[2] * accel[2])) * 180 / Math.PI;
-            const gamma = Math.atan2(gyro[1], gyro[0]) * 180 / Math.PI;
+            const gamma = Math.atan2(mag[1], mag[0]) * 180 / Math.PI;
 
             currentRotation.alpha = alpha;
             currentRotation.beta = beta;
-            currentRotation.gamma = 0;
+            currentRotation.gamma = gamma;
 
             box.style.transform = `rotateX(${currentRotation.beta}deg) rotateY(${currentRotation.gamma}deg) rotateZ(${currentRotation.alpha}deg)`;
         }
