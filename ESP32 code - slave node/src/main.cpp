@@ -35,7 +35,7 @@ const char* sta_password = "pass";
 
 char* UDP_DEFAULT = "192.168.4.100";
 const char* ap_ssid = "ESP32_AP";
-const char* ap_password = "123456789";
+const char* ap_password = "12345678";
 char* udpAddress = UDP_DEFAULT;  // The IP address of the Python client (update this to match your PC's IP)
 const int udpPort = 12346;  // The port to send data to
 
@@ -43,7 +43,7 @@ WiFiUDP udp;
 WebServer server(80);
 
 bool sendData = false;
-int batchSize = 1;  // Default batch size
+int batchSize = 10;  // Default batch size
 int currentBatchCount = 0;
 
 bool calibration_in_progress = false;
@@ -96,6 +96,16 @@ typedef union {
 
 const char* check = "abc/";
 std::vector<uint8_t> batchData;
+
+// Task handles
+TaskHandle_t uwbTaskHandle = NULL;
+TaskHandle_t imuTaskHandle = NULL;
+
+SemaphoreHandle_t wifiMutex;
+
+
+#include "esp_mac.h"
+
 
 void handleStart() {
   sendData = true;
@@ -232,6 +242,7 @@ void sendIMUData() {
     if (currentBatchCount >= batchSize) {
 
     // Send the IMU data immediately
+    if (xSemaphoreTake(wifiMutex, portMAX_DELAY)){
     udp.beginPacket(udpAddress, udpPort);
     udp.write(imuData.data(), imuData.size());
     int result = udp.endPacket();
@@ -241,7 +252,9 @@ void sendIMUData() {
       Serial.print("Error sending IMU data: ");
       Serial.println(result);
     }
-  }
+    xSemaphoreGive(wifiMutex);
+      }
+    }
 }
 
 void sendIMU_MAG() {
@@ -325,19 +338,44 @@ void newRange() {
   binaryFloat2 hi;
   hi.floatingPoint = dist;
   uwbData.insert(uwbData.end(), hi.binary, hi.binary + 4);
-
+  if (xSemaphoreTake(wifiMutex, portMAX_DELAY)){
   // Send the UWB data immediately
   udp.beginPacket(udpAddress, udpPort);
   udp.write(uwbData.data(), uwbData.size());
   int result = udp.endPacket();
   if (result == 1) {
-    Serial.println("UWB data sent successfully");
+    // Serial.println("UWB data sent successfully");
+    
   } else {
     Serial.print("Error sending UWB data: ");
     Serial.println(result);
   }
+  xSemaphoreGive(wifiMutex);
+  }
+
 }
 
+// void uwbTask(void * parameter) {
+//     for(;;) {
+//         if (currentMode == UWB_DATA || currentMode == IMU_UWB_DATA || currentMode == IMU_UWB_COMPASS) {
+//             DW1000Ranging.loop();
+//         }
+//         vTaskDelay(200);  // FreeRTOS task delay (non-blocking)
+//     }
+// }
+
+// void imuTask(void * parameter) {
+//     for(;;) {
+//         if (currentMode == IMU_ONLY || currentMode == IMU_UWB_DATA || currentMode == IMU_COMPASS || currentMode == IMU_UWB_COMPASS) {
+//             accel.readSensor();
+//             gyro.readSensor();
+//             accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+//             gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+//             sendIMUData();
+//         }
+//         vTaskDelay(3);  // FreeRTOS task delay (non-blocking)
+//     }
+// }
 
 
 void setup() {
@@ -371,6 +409,7 @@ void setup() {
   // udpAddress = "192.168.2.7";
 
   */
+// esp_task_wdt_init(10, true);  // Set the timeout to 10 seconds (for example)
 
   // Set up access point (AP) mode
   WiFi.softAP(ap_ssid, ap_password);
@@ -390,6 +429,16 @@ void setup() {
   DW1000Ranging.attachInactiveDevice(inactiveDevice);
 
   DW1000Ranging.startAsTag(tag_addr, DW1000.MODE_LONGDATA_RANGE_LOWPOWER, false);
+
+  // // other setup code...
+  // xTaskCreatePinnedToCore(uwbTask, "UWB Task", 8192, NULL, 1, &uwbTaskHandle, 0); // Run on Core 0
+  // xTaskCreatePinnedToCore(imuTask, "IMU Task", 8192, NULL, 1, &imuTaskHandle, 1); // Run on Core 1
+
+  wifiMutex = xSemaphoreCreateMutex();
+  if (wifiMutex == NULL) {
+      Serial.println("Failed to create wifiMutex");
+      while (true);  // Stop execution if semaphore creation failed
+  }
 
   server.on("/start", handleStart);
   server.on("/stop", handleStop);
@@ -413,6 +462,8 @@ void logMemory() {
 }
 
 
+
+
 void loop() {
   server.handleClient();
   logMemory();  // Add this line to log memory usage
@@ -425,7 +476,7 @@ void loop() {
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
         gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
         sendIMUData();
-        delay(2);
+        // delay(2);
       }
       break;
 
@@ -446,7 +497,7 @@ void loop() {
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
         gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
         sendIMUData();
-        delay(2);
+        // delay(2);
       // }
       DW1000Ranging.loop();
       break;
@@ -478,10 +529,13 @@ void loop() {
         DW1000Ranging.loop();
         break;
 
+    // case IMU_UWB:
+
+
     default:
       break;
   }
-  // delay(5);
+  delay(5);
 
 }
 

@@ -235,6 +235,12 @@ def data_acquisition():
 
 @app.route('/calibration')
 def calibration():
+    global udp_thread_running, udp_thread, udp_thread_running2, udp_thread2, udp_thread_running3, udp_thread3
+ 
+    stop_udp_thread(udp_thread_stop_event, udp_thread)
+    stop_udp_thread(udp_thread2_stop_event, udp_thread2)
+    stop_udp_thread(udp_thread3_stop_event, udp_thread3)
+
     network_info = get_network_info()
     return render_template('calibration_page.html', network_info=network_info)
 
@@ -561,7 +567,7 @@ def uwb_udp_listener(stop_event2):
                     #     'visible': True
                     # }
                     # print(uwb_data)
-                    sio_client.emit('uwb_data', uwb_data)
+                    # sio_client.emit('uwb_data', uwb_data)
                     # socketio.emit('uwb_data', uwb_data)
                     last_received_time = current_time
                     visible_device = True
@@ -596,7 +602,7 @@ def set_uwb_offset():
         try:
             # Convert offset to the appropriate type, if necessary
             offset = float(offset)
-            address = int(address)  # Ensure address is an integer
+            address = float(address)  # Ensure address is an integer
 
             
             # Now you can use `address` and `offset` as needed
@@ -676,7 +682,7 @@ def read_serial_data(stop_event):
     # most_recent_gyro_file = "test_imu_gyro.calib"
     # batch_size = 10
     batch_data = []
-    check = "img/"
+    check = "abc/"
     check_encoded = check.encode()
     check_length = len(check_encoded)
 
@@ -732,9 +738,12 @@ def read_serial_data(stop_event):
                 buffer = buffer[end_index:]  # Remove the processed part from the buffer
 
                 if len(part) == 12:  # 12 bytes: 4 for Tio, 2 for address, 4 for distance
-                    Tio, address, dist = struct.unpack('<3f', part)
+                    # Tio, address, dist = struct.unpack('<3f', part)
+                    
+                    Tio = struct.unpack('f', data[4:8])[0]
+                    address = struct.unpack('f', data[8:12])[0]
+                    distance = struct.unpack('f', data[12:16])[0]
 
-    
 
                     if address == 130:
                         sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off1})
@@ -748,21 +757,21 @@ def read_serial_data(stop_event):
                     
 
 
-            while len(buffer) >= 44:  # 4 bytes for the "abc/" and 28 bytes for the packet
+            while len(buffer) >= 32:  # 4 bytes for the "abc/" and 28 bytes for the packet
                 start_index = buffer.find(check_encoded)
                 if start_index == -1:
                     break  # "abc/" not found, wait for more data
 
 
-                end_index = start_index + len(check_encoded) + 40
+                end_index = start_index + len(check_encoded) + 28
                 if end_index > len(buffer):
                     break  # Not enough data for a full packet, wait for more data
 
                 part = buffer[start_index + len(check_encoded):end_index]
                 buffer = buffer[end_index:]  # Remove the processed part from the buffer
 
-                if len(part) == 40:   # 28 bytes for the packet (Tio accx accy accz gyrox gyroy gyroz) 4*7 + (magx magy magz) 4*3 = 40
-                    numbers = struct.unpack('<10f', part)
+                if len(part) == 28:   # 28 bytes for the packet (Tio accx accy accz gyrox gyroy gyroz) 4*7 + (magx magy magz) 4*3 = 40
+                    numbers = struct.unpack('<7f', part)
                     # Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
                     # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
                     
@@ -774,9 +783,9 @@ def read_serial_data(stop_event):
                     Tio = numbers[0] - offset
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
-                    mag = numbers[7:10]
+                    # mag = numbers[7:10]
 
-                    print (f"Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}, Mag: {mag}")
+                    print (f"Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
                     # if(address != 0):
                         # print(f"Address: {address}, Distance: {dist}, Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
                     # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
@@ -784,12 +793,14 @@ def read_serial_data(stop_event):
                         accel, gyro = apply_calibration(accel, gyro)
                     # print(address)
                     # if(address != 0):
-                    if(address == 130):
-                        dist1 = dist
-                    if(address == 131):
-                        dist2 = dist
-                    if(address == 133):
-                        dist3 = dist
+
+
+                    # if(address == 130):
+                    #     dist1 = dist
+                    # if(address == 131):
+                    #     dist2 = dist
+                    # if(address == 133):
+                    #     dist3 = dist
 
                 # # Dynamic addressing logic
                 # if address not in add:
@@ -822,17 +833,17 @@ def read_serial_data(stop_event):
                     cycle_counter += 1
                     mag_counter += 1
 
-                    if mag_counter %30 == 0:
-                                formatted_mag = [f"{mag[0]:.7e}", f"{mag[1]:.7e}", f"{mag[2]:.7e}"]
+                    # if mag_counter %30 == 0:
+                    #             formatted_mag = [f"{mag[0]:.7e}", f"{mag[1]:.7e}", f"{mag[2]:.7e}"]
 
-                                with open(mag_filename, mode='a', newline='') as mag_file:
-                                    mag_writer = csv.writer(mag_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    mag_writer.writerow(formatted_mag)
+                    #             with open(mag_filename, mode='a', newline='') as mag_file:
+                    #                 mag_writer = csv.writer(mag_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                    #                 mag_writer.writerow(formatted_mag)
 
                     # Emit data every 20 cycles
                     if cycle_counter >= cycle_counter_limit:
                         # Append data to batch
-                        batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro, 'mag': mag})
+                        batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
                         if len(batch_data) >= batch_size:
                             # Emit the batch of data
                             sio_client.emit('sensor_data', batch_data)

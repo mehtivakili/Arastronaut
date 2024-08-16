@@ -5,6 +5,8 @@ UDP_IP = "192.168.4.100"  # Listen on all available interfaces
 UDP_PORT = 12346
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
+
 sock.bind((UDP_IP, UDP_PORT))
 
 def parse_imu_mag_data(data):

@@ -26,7 +26,7 @@ bool calibration_in_progress = false;
 bool calibration_done = false;
 bool print_distance = false; // Flag to print distance before calibration
 
-char this_anchor_addr[] = "85:00:22:EA:82:60:3B:9C";
+char this_anchor_addr[] = "82:00:22:EA:82:60:3B:9C";
 float this_anchor_target_distance = 1; // Measured distance to anchor in meters
 
 uint16_t this_anchor_Adelay = 16600; // Starting value
@@ -195,18 +195,18 @@ void inactiveDevice(DW1000Device *device) {
 
 void setup() {
   Serial.begin(115200);
-  WiFi.begin(ssid, password);
+  // WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
-  }
+  // while (WiFi.status() != WL_CONNECTED) {
+  //   delay(1000);
+  //   Serial.println("Connecting to WiFi...");
+  // }
 
-  Serial.println("Connected to WiFi");
+  // Serial.println("Connected to WiFi");
 
-  server.on("/start_calibration", handleCalibrationRequest);
-  server.on("/print_distance", handlePrintDistanceRequest); // Add handler to toggle distance printing
-  server.begin();
+  // server.on("/start_calibration", handleCalibrationRequest);
+  // server.on("/print_distance", handlePrintDistanceRequest); // Add handler to toggle distance printing
+  // server.begin();
 
   // Init the configuration
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
