@@ -46,6 +46,11 @@ io.on('connection', (socket) => {
     io.emit("uwb_data", data);
   })
 
+  socket.on('tag_position', (data)=>{
+    console.log("UWB poistion received: ", data);
+    io.emit("tag_position", data);
+  })
+
   // Handle disconnection events
   socket.on('disconnect', () => {
     console.log('user disconnected');

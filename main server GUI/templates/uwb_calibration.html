@@ -49,11 +49,37 @@
             background: linear-gradient(90deg, #00b300, #004d00);
         }
         .main-container {
-            flex-grow: 1;
-            width: 100%;
             display: flex;
-            padding-top: 10px;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            height: calc(100vh - 60px);
+        }
+        #plane {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            background-color: lightgrey;
+            border: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
+        }
+        .anchor, .tag {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: blue;
+            border-radius: 50%;
+            text-align: center;
+            color: white;
+            line-height: 20px;
+            font-size: 12px;
+        }
+        .tag {
+            background-color: red;
         }
         .side-container {
             width: 30%;
@@ -67,28 +93,14 @@
             overflow-y: auto;
             max-height: 100%;
         }
-        .uwb-device {
-            display: none;
-            margin-top: 20px;
-        }
-        .uwb-device.visible {
-            display: block;
-        }
-        .wifi-logo {
-            width: 50px;
-            height: 50px;
-            background-image: url('/static/wifi_logo.gif');
-            background-size: contain;
-            background-repeat: no-repeat;
-        }
         .serial-monitor {
-            width: 70%;
-            height: calc(100vh - 60px);
+            width: 100%;
+            height: 200px;
             overflow: auto;
             background-color: rgba(30, 30, 30, 0.8);
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            margin-left: 20px;
+            margin-top: 20px;
             padding: 20px;
         }
         .input-group {
@@ -102,6 +114,10 @@
             background: linear-gradient(90deg, #004d00, #00b300);
             cursor: pointer;
             transition: background 0.3s;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
         }
         button:hover {
             background: linear-gradient(90deg, #00b300, #004d00);
@@ -263,66 +279,64 @@
         <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
         <h1>UWB Anchor PRE-Calib</h1>
     </div>
+
     <div class="main-container">
+        <!-- Plane with anchors and tag -->
+        <div id="plane">
+            <div id="anchor-130" class="anchor" style="left: 0; top: 0;">A1</div>
+            <div id="anchor-131" class="anchor" style="right: 0; top: 0;">A2</div>
+            <div id="anchor-133" class="anchor" style="left: 50%; top: 100%;">A3</div>
+            <div id="tag" class="tag" style="left: 50%; top: 50%;">T</div>
+        </div>
+
+        <!-- Side container for additional information -->
         <div class="side-container">
-            <div>
-                <!-- <h2>UWB Calibration</h2> -->
-                <form style="width: 100%; display: none;" id="calibration-form">
-                    <div class="input-group">
-                        <label for="address">Device Address:</label>
-                        <input type="text" id="address" name="address" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="offset">Measured Value:</label>
-                        <input type="text" id="offset" name="offset" required>
-                    </div>
-                    <button type="submit">Set Offset</button>
-                </form>
-                <!-- <div id="response-message"></div> To show response message             -->
-            </div>
             <h2>UWB Device Information</h2>
-            <div style="padding-left: 35%;" id="uwb-devices-container">
+            <div id="uwb-devices-container">
                 <!-- Device information will be appended here -->
             </div>
         </div>
-        <div class="serial-monitor">
-            <div class="log" id="log">
-                <!-- Log will appear here -->
-            </div>
-        </div>
     </div>
-    <script src="../static/js/socket.io.js"></script>
+      <script src="../static/js/socket.io.js"></script>
     <script>
 
-        document.getElementById('calibration-form').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent the default form submission
+        // document.getElementById('calibration-form').addEventListener('submit', function(event) {
+        //     event.preventDefault(); // Prevent the default form submission
             
-            const address = document.getElementById('address').value;
-            const offset = document.getElementById('offset').value;
+        //     const address = document.getElementById('address').value;
+        //     const offset = document.getElementById('offset').value;
 
-            // Prepare the data to be sent
-            const data = {
-                address: address,
-                offset: offset
-            };
+        //     // Prepare the data to be sent
+        //     const data = {
+        //         address: address,
+        //         offset: offset
+        //     };
 
-            // Send the POST request using fetch
-            fetch('/set_uwb_offset', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.text()) // Parse the response as text
-            .then(result => {
-                document.getElementById('response-message').innerText = result;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('response-message').innerText = 'Error setting offset';
-            });
-        });
+        //     // Send the POST request using fetch
+        //     fetch('/set_uwb_offset', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json'
+        //         },
+        //         body: JSON.stringify(data)
+        //     })
+        //     .then(response => response.text()) // Parse the response as text
+        //     .then(result => {
+        //         document.getElementById('response-message').innerText = result;
+        //     })
+        //     .catch(error => {
+        //         console.error('Error:', error);
+        //         document.getElementById('response-message').innerText = 'Error setting offset';
+        //     });
+        // });
+
+        // Constants for scaling and positioning the tag within the plane
+        const planeWidth = 500;  // The width of the #plane in pixels
+        const planeHeight = 500; // The height of the #plane in pixels
+        const maxX = 5.0;  // Maximum X value from your data
+        const maxY = 5.0;  // Maximum Y value from your data
+        const scaleX = planeWidth / maxX;  // Scale factor for X
+        const scaleY = planeHeight / maxY; // Scale factor for Y
 
         let devices = {};  // Stores the most recent data for each device
         let recentAddresses = [];  // Stores the last 20 unique short_addresses
@@ -346,13 +360,39 @@
             console.error('Connection error:', error);
         });
     
+
+        // Listen for tag position updates
+        socket.on('tag_position', function(position) {
+            const { x, y, z } = position;
+            updateTagPosition(x, y);
+        });
+
+        // Function to update the tag position based on received data
+        function updateTagPosition(x, y) {
+            const tag = document.getElementById('tag');
+
+            // Scale the x and y values to fit within the plane
+            const scaledX = x * scaleX;
+            const scaledY = y * scaleY;
+
+            // Ensure the tag stays within the boundaries of the plane
+            const boundedX = Math.max(0, Math.min(scaledX, planeWidth - tag.offsetWidth));
+            const boundedY = Math.max(0, Math.min(scaledY, planeHeight - tag.offsetHeight));
+
+            // Update the tag's position
+            tag.style.left = `${boundedX}px`;
+            tag.style.top = `${boundedY}px`;
+
+            console.log("x: " + x + " y: " + y + " -> scaled x: " + boundedX + " y: " + boundedY);
+        }
+
         socket.on('uwb_data', function(data) {
-            console.log('Received data:', data);
+            // console.log('Received data:', data);
     
             // Update the devices object and last received time
             devices[data.short_address] = data;
             lastReceivedTime[data.short_address] = Date.now();
-            console.log('Updated devices object:', devices);
+            // console.log('Updated devices object:', devices);
     
             // Add to the recentAddresses array if it's a new address
             if (!recentAddresses.includes(data.short_address)) {

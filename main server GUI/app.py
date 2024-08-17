@@ -52,6 +52,10 @@ dist1 = 0
 dist2 = 0
 dist3 = 0
 
+dist10 = 0
+dist20 = 0
+dist30 = 0
+
 # sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
 
@@ -112,6 +116,13 @@ def apply_calibration(accel, gyro):
         ((int)(((Kg[2][0] * Tg[2][0]) + (Kg[2][1] * Tg[2][1]) + (Kg[2][2] * Tg[2][2])) * (gyro[2] - gyro_bias[2]) * 1000)) / 1000.0
     ]
     return acce_calibrated, gyro_calibrated
+
+
+anchor_positions = {
+    130: {"x": 0, "y": 5, "z": 0},
+    131: {"x": 5, "y": 0, "z": 0},
+    133: {"x": 5, "y": 5, "z": 0},
+}
 
 state = "imu"
 
@@ -286,6 +297,25 @@ def uwb_udp():
     network_info = get_network_info()
     return render_template('uwb_calibration.html', network_info=network_info)
 
+@app.route('/set_anchor_positions', methods=['POST'])
+def set_anchor_positions():
+    data = request.get_json()
+    address = data.get('address')
+    x = data.get('x')
+    y = data.get('y')
+    z = data.get('z')
+
+    if address in anchor_positions and x is not None and y is not None and z is not None:
+        try:
+            x = float(x)
+            y = float(y)
+            z = float(z)
+            anchor_positions[address] = {"x": x, "y": y, "z": z}
+            return jsonify(status='success', anchor=anchor_positions[address])
+        except ValueError:
+            return "Invalid coordinates", 400
+    else:
+           return "Invalid address or missing coordinates", 400
 
 
 
@@ -465,6 +495,29 @@ def calculate_checksum(data):
 offset = 0
 from datetime import datetime
 
+def calculate_tag_position(dist1, dist2, dist3):
+    # Trilateration logic to calculate tag position based on distances from anchors
+    x1, y1, z1 = anchor_positions[130]['x'], anchor_positions[130]['y'], anchor_positions[130]['z']
+    x2, y2, z2 = anchor_positions[131]['x'], anchor_positions[131]['y'], anchor_positions[131]['z']
+    x3, y3, z3 = anchor_positions[133]['x'], anchor_positions[133]['y'], anchor_positions[133]['z']
+
+    # Example simplified 2D trilateration
+    A = 2 * x2 - 2 * x1
+    B = 2 * y2 - 2 * y1
+    C = dist1**2 - dist2**2 - x1**2 + x2**2 - y1**2 + y2**2
+    D = 2 * x3 - 2 * x2
+    E = 2 * y3 - 2 * y2
+    F = dist2**2 - dist3**2 - x2**2 + x3**2 - y2**2 + y3**2
+
+    x = (C * E - F * B) / (E * A - B * D)
+    y = (C * D - A * F) / (B * D - A * E)
+    z = 0  # Assuming 2D plane
+
+    return {"x": x, "y": y, "z": z}
+
+
+
+
 def uwb_udp_listener(stop_event2):
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -482,6 +535,7 @@ def uwb_udp_listener(stop_event2):
 
     global off1, off2, off3
     global dist1, dist2, dist3
+    global dist10, dist20, dist30
     
     while not stop_event2.is_set():
         # with lock:
@@ -493,7 +547,7 @@ def uwb_udp_listener(stop_event2):
 
             data, addr = sock.recvfrom(4096)
             buffer.extend(data)
-            print(f"Buffer length: {len(buffer)}")
+            # print(f"Buffer length: {len(buffer)}")
 
             current_time = time.time()
 
@@ -540,18 +594,29 @@ def uwb_udp_listener(stop_event2):
                         'visible': True
                     }
 
-                if address == 130:
-                    # print(uwb_data1)
-                    dist1 = distance
-                    sio_client.emit('uwb_data', uwb_data1)                
-                elif address == 131:
-                    # print(uwb_data2)
-                    dist2 = distance
-                    sio_client.emit('uwb_data', uwb_data2)                
-                elif address == 133:
-                    # print(uwb_data3)
-                    dist3 = distance
-                    sio_client.emit('uwb_data', uwb_data3)
+                    if address == 130:
+                        # print(uwb_data1)
+                        dist1 = distance
+                        dist10 = distance - off1
+                        sio_client.emit('uwb_data', uwb_data1)                
+                    elif address == 131:
+                        # print(uwb_data2)
+                        dist2 = distance
+                        dist20 = distance -off2
+                        sio_client.emit('uwb_data', uwb_data2)                
+                    elif address == 133:
+                        # print(uwb_data3)
+                        dist3 = distance
+                        dist30 = distance - off3
+                        sio_client.emit('uwb_data', uwb_data3)
+
+                    # Calculate tag position once all distances are available
+                    if dist10 > 0 and dist20 > 0 and dist30 > 0:
+                        tag_position = calculate_tag_position(dist10, dist20, dist30)
+                        # print(dist10, dist20, dist30)
+                        print(tag_position)
+                        sio_client.emit('tag_position', tag_position)
+
 
                     # uwb_data = {
                     #     'time': Tio,
