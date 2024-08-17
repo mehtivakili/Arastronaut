@@ -297,25 +297,25 @@ def uwb_udp():
     network_info = get_network_info()
     return render_template('uwb_calibration.html', network_info=network_info)
 
-@app.route('/set_anchor_positions', methods=['POST'])
-def set_anchor_positions():
-    data = request.get_json()
-    address = data.get('address')
-    x = data.get('x')
-    y = data.get('y')
-    z = data.get('z')
+# @app.route('/set_anchor_positions', methods=['POST'])
+# def set_anchor_positions():
+#     data = request.get_json()
+#     address = data.get('address')
+#     x = data.get('x')
+#     y = data.get('y')
+#     z = data.get('z')
 
-    if address in anchor_positions and x is not None and y is not None and z is not None:
-        try:
-            x = float(x)
-            y = float(y)
-            z = float(z)
-            anchor_positions[address] = {"x": x, "y": y, "z": z}
-            return jsonify(status='success', anchor=anchor_positions[address])
-        except ValueError:
-            return "Invalid coordinates", 400
-    else:
-           return "Invalid address or missing coordinates", 400
+#     if address in anchor_positions and x is not None and y is not None and z is not None:
+#         try:
+#             x = float(x)
+#             y = float(y)
+#             z = float(z)
+#             anchor_positions[address] = {"x": x, "y": y, "z": z}
+#             return jsonify(status='success', anchor=anchor_positions[address])
+#         except ValueError:
+#             return "Invalid coordinates", 400
+#     else:
+#            return "Invalid address or missing coordinates", 400
 
 
 
@@ -516,6 +516,20 @@ def calculate_tag_position(dist1, dist2, dist3):
     return {"x": x, "y": y, "z": z}
 
 
+@app.route('/set_anchor_positions', methods=['POST'])
+def set_anchor_positions():
+    data = request.get_json()
+
+    anchor_positions[130] = data.get('anchor130', anchor_positions[130])
+    anchor_positions[131] = data.get('anchor131', anchor_positions[131])
+    anchor_positions[133] = data.get('anchor133', anchor_positions[133])
+
+    print(anchor_positions[130], anchor_positions[131], anchor_positions[133])
+
+    return jsonify({"status": "success", "anchor_positions": anchor_positions})
+
+
+
 
 
 def uwb_udp_listener(stop_event2):
@@ -614,7 +628,7 @@ def uwb_udp_listener(stop_event2):
                     if dist10 > 0 and dist20 > 0 and dist30 > 0:
                         tag_position = calculate_tag_position(dist10, dist20, dist30)
                         # print(dist10, dist20, dist30)
-                        print(tag_position)
+                        # print(tag_position)
                         sio_client.emit('tag_position', tag_position)
 
 

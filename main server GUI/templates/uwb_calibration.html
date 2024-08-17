@@ -93,6 +93,21 @@
             overflow-y: auto;
             max-height: 100%;
         }
+
+        .uwb-device {
+            display: none;
+            margin-top: 20px;
+        }
+        .uwb-device.visible {
+            display: block;
+        }
+        .wifi-logo {
+            width: 50px;
+            height: 50px;
+            background-image: url('/static/wifi_logo.gif');
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
         .serial-monitor {
             width: 100%;
             height: 200px;
@@ -283,14 +298,38 @@
     <div class="main-container">
         <!-- Plane with anchors and tag -->
         <div id="plane">
+            <svg id="lines" width="500" height="500" style="position: absolute; top: 0; left: 0;"></svg>
+
             <div id="anchor-130" class="anchor" style="left: 0; top: 0;">A1</div>
-            <div id="anchor-131" class="anchor" style="right: 0; top: 0;">A2</div>
-            <div id="anchor-133" class="anchor" style="left: 50%; top: 100%;">A3</div>
+            <div id="anchor-131" class="anchor" style="left: 480px; top: 0;">A2</div>
+            <div id="anchor-133" class="anchor" style="left: 240px; top: 480px;">A3</div>
+            
             <div id="tag" class="tag" style="left: 50%; top: 50%;">T</div>
         </div>
 
         <!-- Side container for additional information -->
         <div class="side-container">
+            <h2>Set Anchor Positions</h2>
+            <div class="input-group">
+                <label for="anchor-130-pos">Anchor A1 (x, y):</label>
+                <input type="text" id="anchor-130-pos" placeholder="x, y" value="0, 0" />
+            </div>
+            <div class="input-group">
+                <label for="anchor-131-pos">Anchor A2 (x, y):</label>
+                <input type="text" id="anchor-131-pos" placeholder="x, y" value="5, 0" />
+            </div>
+            <div class="input-group">
+                <label for="anchor-133-pos">Anchor A3 (x, y):</label>
+                <input type="text" id="anchor-133-pos" placeholder="x, y" value="2.5, 5" />
+            </div>
+            <button onclick="updateAnchorPositions()">Update Anchor Positions</button>
+
+            <h2>Anchor Distances</h2>
+            <p id="distance-a1-a2">Distance A1-A2: </p>
+            <p id="distance-a2-a3">Distance A2-A3: </p>
+            <p id="distance-a1-a3">Distance A1-A3: </p>
+
+
             <h2>UWB Device Information</h2>
             <div id="uwb-devices-container">
                 <!-- Device information will be appended here -->
@@ -367,7 +406,63 @@
             updateTagPosition(x, y);
         });
 
-        // Function to update the tag position based on received data
+        function updateAnchorPositions() {
+    const anchor1Pos = document.getElementById('anchor-130-pos').value.split(',').map(Number);
+    const anchor2Pos = document.getElementById('anchor-131-pos').value.split(',').map(Number);
+    const anchor3Pos = document.getElementById('anchor-133-pos').value.split(',').map(Number);
+
+    document.getElementById('anchor-130').style.left = `${anchor1Pos[0] * scaleX}px`;
+    document.getElementById('anchor-130').style.top = `${anchor1Pos[1] * scaleY}px`;
+
+    document.getElementById('anchor-131').style.left = `${anchor2Pos[0] * scaleX}px`;
+    document.getElementById('anchor-131').style.top = `${anchor2Pos[1] * scaleY}px`;
+
+    document.getElementById('anchor-133').style.left = `${anchor3Pos[0] * scaleX}px`;
+    document.getElementById('anchor-133').style.top = `${anchor3Pos[1] * scaleY}px`;
+
+    const distanceA1A2 = calculateDistance(anchor1Pos, anchor2Pos);
+    const distanceA2A3 = calculateDistance(anchor2Pos, anchor3Pos);
+    const distanceA1A3 = calculateDistance(anchor1Pos, anchor3Pos);
+
+    document.getElementById('distance-a1-a2').innerText = `Distance A1-A2: ${distanceA1A2.toFixed(2)} meters`;
+    document.getElementById('distance-a2-a3').innerText = `Distance A2-A3: ${distanceA2A3.toFixed(2)} meters`;
+    document.getElementById('distance-a1-a3').innerText = `Distance A1-A3: ${distanceA1A3.toFixed(2)} meters`;
+
+    sendAnchorPositions(anchor1Pos, anchor2Pos, anchor3Pos);
+}
+
+    function sendAnchorPositions(pos1, pos2, pos3) {
+        const data = {
+            anchor130: { x: pos1[0], y: pos1[1], z: 0 },
+            anchor131: { x: pos2[0], y: pos2[1], z: 0 },
+            anchor133: { x: pos3[0], y: pos3[1], z: 0 }
+        };
+
+        fetch('/set_anchor_positions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            console.log('Anchor positions updated:', result);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+
+function calculateDistance(pos1, pos2) {
+    const dx = pos2[0] - pos1[0];
+    const dy = pos2[1] - pos1[1];
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+
+
         function updateTagPosition(x, y) {
             const tag = document.getElementById('tag');
 
@@ -383,8 +478,52 @@
             tag.style.left = `${boundedX}px`;
             tag.style.top = `${boundedY}px`;
 
+            // Display the x and y coordinates on the tag
+            tag.innerText = `T\n(${x.toFixed(2)}, ${y.toFixed(2)})`;
+
             console.log("x: " + x + " y: " + y + " -> scaled x: " + boundedX + " y: " + boundedY);
+            // Draw lines to each anchor
+            drawLineAndDistance('anchor-130', boundedX, boundedY);
+            drawLineAndDistance('anchor-131', boundedX, boundedY);
+            drawLineAndDistance('anchor-133', boundedX, boundedY);
         }
+
+        function drawLineAndDistance(anchorId, tagX, tagY) {
+    const anchor = document.getElementById(anchorId);
+    const anchorX = parseFloat(anchor.style.left);
+    const anchorY = parseFloat(anchor.style.top);
+
+    // Get the corresponding device distance
+    const device = devices[parseInt(anchorId.split('-')[1])];
+    const distance = device ? device.distance : 0;
+
+    const svg = document.getElementById('lines');
+    let line = document.getElementById(`line-${anchorId}`);
+    let text = document.getElementById(`text-${anchorId}`);
+
+    if (!line) {
+        line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('id', `line-${anchorId}`);
+        line.setAttribute('stroke', 'black');
+        line.setAttribute('stroke-width', '2');
+        svg.appendChild(line);
+
+        text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('id', `text-${anchorId}`);
+        text.setAttribute('fill', 'black');
+        text.setAttribute('font-size', '14');
+        svg.appendChild(text);
+    }
+
+    line.setAttribute('x1', tagX + 10); // Adjust for the circle radius
+    line.setAttribute('y1', tagY + 10);
+    line.setAttribute('x2', anchorX + 10);
+    line.setAttribute('y2', anchorY + 10);
+
+    text.setAttribute('x', (tagX + anchorX) / 2 + 10);
+    text.setAttribute('y', (tagY + anchorY) / 2 - 5);
+    text.textContent = `${distance.toFixed(2)} m`;  // Directly use the device.distance
+}
 
         socket.on('uwb_data', function(data) {
             // console.log('Received data:', data);
