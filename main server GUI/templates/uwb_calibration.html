@@ -323,6 +323,7 @@
                 <input type="text" id="anchor-133-pos" placeholder="x, y" value="2.5, 5" />
             </div>
             <button onclick="updateAnchorPositions()">Update Anchor Positions</button>
+            <button onclick="remapAnchors()">Remap Anchors</button>
 
             <h2>Anchor Distances</h2>
             <p id="distance-a1-a2">Distance A1-A2: </p>
@@ -368,6 +369,65 @@
         //         document.getElementById('response-message').innerText = 'Error setting offset';
         //     });
         // });
+
+function remapAnchors() {
+    // Ensure the device distances are valid numbers
+    const distanceA1T = devices[130]?.distance || 0;
+    const distanceA2T = devices[131]?.distance || 0;
+    const distanceA3T = devices[133]?.distance || 0;
+
+    // Check for any zero or negative distances which would cause issues
+    if (distanceA1T <= 0 || distanceA2T <= 0 || distanceA3T <= 0) {
+        console.error('Invalid distances provided, cannot remap anchors.');
+        return;
+    }
+
+    // The origin anchor 1 (0, 0)
+    const anchor1X = 0;
+    const anchor1Y = 0;
+
+    // Calculate anchor 2's position on the x-axis
+    const anchor2X = distanceA2T;
+    const anchor2Y = 0;
+
+    // Calculate anchor 3's position using trilateration
+    const A = (distanceA1T ** 2 - distanceA2T ** 2 + anchor2X ** 2) / (2 * anchor2X);
+    const B = Math.sqrt(distanceA1T ** 2 - A ** 2);
+
+    const anchor3X = A;
+    const anchor3Y = B;
+
+    // If B is NaN, this indicates a problem in the configuration
+    if (isNaN(anchor3X) || isNaN(anchor3Y)) {
+        console.error('Trilateration calculation failed.');
+        return;
+    }
+
+    // Update anchor positions
+    document.getElementById('anchor-130').style.left = `${anchor1X * scaleX}px`;
+    document.getElementById('anchor-130').style.top = `${anchor1Y * scaleY}px`;
+
+    document.getElementById('anchor-131').style.left = `${anchor2X * scaleX}px`;
+    document.getElementById('anchor-131').style.top = `${anchor2Y * scaleY}px`;
+
+    document.getElementById('anchor-133').style.left = `${anchor3X * scaleX}px`;
+    document.getElementById('anchor-133').style.top = `${anchor3Y * scaleY}px`;
+
+    // Update anchor positions in the input fields
+    document.getElementById('anchor-130-pos').value = `${anchor1X.toFixed(2)}, ${anchor1Y.toFixed(2)}`;
+    document.getElementById('anchor-131-pos').value = `${anchor2X.toFixed(2)}, ${anchor2Y.toFixed(2)}`;
+    document.getElementById('anchor-133-pos').value = `${anchor3X.toFixed(2)}, ${anchor3Y.toFixed(2)}`;
+
+    // Send updated anchor positions to the server
+    sendAnchorPositions([anchor1X, anchor1Y], [anchor2X, anchor2Y], [anchor3X, anchor3Y]);
+
+    console.log('Anchors remapped:', {
+        anchor1: { x: anchor1X, y: anchor1Y },
+        anchor2: { x: anchor2X, y: anchor2Y },
+        anchor3: { x: anchor3X, y: anchor3Y }
+    });
+}
+
 
         // Constants for scaling and positioning the tag within the plane
         const planeWidth = 500;  // The width of the #plane in pixels
