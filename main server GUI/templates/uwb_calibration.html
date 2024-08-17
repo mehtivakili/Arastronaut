@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UWB UDP Interface</title>
+    <title>UWB Anchor PRE-Calib</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         body {
@@ -261,13 +261,13 @@
     
     <div class="top-container">
         <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
-        <h1>UWB UDP Interface</h1>
+        <h1>UWB Anchor PRE-Calib</h1>
     </div>
     <div class="main-container">
         <div class="side-container">
             <div>
-                <h2>UWB Calibration</h2>
-                <form style="width: 100%;" id="calibration-form">
+                <!-- <h2>UWB Calibration</h2> -->
+                <form style="width: 100%; display: none;" id="calibration-form">
                     <div class="input-group">
                         <label for="address">Device Address:</label>
                         <input type="text" id="address" name="address" required>
@@ -374,42 +374,76 @@
             }, UPDATE_DELAY);
         });
     
+        let lastUpdate = 0;
+
         function updateDeviceList() {
             const devicesContainer = document.getElementById('uwb-devices-container');
-            
+
             if (!devicesContainer) {
                 console.error("Container element 'uwb-devices-container' not found.");
                 return;
             }
-    
-            // Sort the recent addresses incrementally
-            const sortedAddresses = recentAddresses.sort((a, b) => a - b);
-            console.log('Sorted addresses:', sortedAddresses);
-    
-            // Iterate over each device and update or create a new row
-            sortedAddresses.forEach(address => {
+
+            recentAddresses.forEach(address => {
                 const device = devices[address];
                 const isDisconnected = Date.now() - lastReceivedTime[address] > DISCONNECT_TIMEOUT;
-                console.log(`Updating UI for device ${address} with data:`, device);
                 
                 let deviceDiv = document.getElementById(`device-${address}`);
-    
+
                 if (!deviceDiv) {
-                    // If the device row doesn't exist, create a new one
+                    // Create a new div only if it doesn't exist
                     deviceDiv = document.createElement('div');
                     deviceDiv.id = `device-${address}`;
                     deviceDiv.className = 'uwb-device visible';
                     devicesContainer.appendChild(deviceDiv);
-                    console.log(`Created new device row for address ${address}`);
+
+                    // Only add the static parts (address and offset input) once
+                    const htmlStatic = `
+                        <div class="wifi-logo" style="background-image: url('/static/${isDisconnected ? 'disconnected_logo.png' : 'connected_logo.png'}');"></div>
+                        <p>Device Address: ${device.short_address}</p>
+                        <p>Measured Distance: <input style="width: 15%;" type="number" id="offset-${address}" value="${device.offset || 0}" /> <button onclick="updateOffset('${address}')">Update</button></p>
+                    `;
+                    deviceDiv.innerHTML = htmlStatic;
                 }
-    
-                // Update the device information in the row
-                deviceDiv.innerHTML = `
-                    <div class="wifi-logo" style="background-image: url('/static/${isDisconnected ? 'disconnected_logo.png' : 'connected_logo.png'}');"></div>
-                    <p>Device Address: ${device.short_address}</p>
-                    <p>Distance: ${device.distance.toFixed(2)} meters</p>
-                `;
-                console.log(`Updated UI for device ${address}, disconnected: ${isDisconnected}`);
+
+                // Update only the dynamic parts (like distance and connection status)
+                const logoDiv = deviceDiv.querySelector('.wifi-logo');
+                logoDiv.style.backgroundImage = `url('/static/${isDisconnected ? 'disconnected_logo.png' : 'connected_logo.png'}')`;
+
+                const distanceElement = deviceDiv.querySelector('.distance');
+                if (!distanceElement) {
+                    const distanceP = document.createElement('p');
+                    distanceP.className = 'distance';
+                    distanceP.innerText = `Distance: ${device.distance.toFixed(2)} meters`;
+                    deviceDiv.appendChild(distanceP);
+                } else {
+                    distanceElement.innerText = `Distance: ${device.distance.toFixed(2)} meters`;
+                }
+            });
+        }
+
+        function updateOffset(address) {
+            const offsetValue = document.getElementById(`offset-${address}`).value;
+            
+            const data = {
+                address: address,
+                offset: offsetValue
+            };
+
+            // Send the POST request using fetch
+            fetch('/set_uwb_offset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.text())
+            .then(result => {
+                console.log(`Offset updated for address ${address}:`, result);
+            })
+            .catch(error => {
+                console.error('Error:', error);
             });
         }
     
