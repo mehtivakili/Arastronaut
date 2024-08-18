@@ -18,6 +18,9 @@ from flask_socketio import SocketIO
 # import eventlet
 import socketio
 
+import numpy as np
+
+
 import matplotlib
 matplotlib.use('Agg')  # Use a non-GUI backend
 
@@ -104,6 +107,9 @@ udp_thread2 = None
 udp_thread3_stop_event = Event()
 udp_thread3 = None
 
+udp_thread4_stop_event = Event()
+udp_thread4 = None
+
 def apply_calibration(accel, gyro):
     acce_calibrated = [
         ((int)(((Ka[0][0] * Ta[0][0]) + (Ka[0][1] * Ta[1][1]) + (Ka[0][2] * Ta[2][2])) * (accel[0] - acce_bias[0]) * 1000)) / 1000.0,
@@ -171,11 +177,12 @@ def stop_udp_thread(stop_event, thread):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    global udp_thread_running, udp_thread, udp_thread_running2, udp_thread2, udp_thread_running3, udp_thread3
+    global udp_thread_running, udp_thread, udp_thread_running2, udp_thread2, udp_thread_running3, udp_thread3, udp_thread4
  
     stop_udp_thread(udp_thread_stop_event, udp_thread)
     stop_udp_thread(udp_thread2_stop_event, udp_thread2)
     stop_udp_thread(udp_thread3_stop_event, udp_thread3)
+    stop_udp_thread(udp_thread4_stop_event, udp_thread4)
 
     network_info = get_network_info()
     return render_template('index.html', network_info=network_info)
@@ -246,12 +253,15 @@ def data_acquisition():
 
 @app.route('/calibration')
 def calibration():
-    global udp_thread_running, udp_thread, udp_thread_running2, udp_thread2, udp_thread_running3, udp_thread3
+    global udp_thread_running, udp_thread, udp_thread_running2, udp_thread2, udp_thread_running3, udp_thread3, udp_thread4
  
     stop_udp_thread(udp_thread_stop_event, udp_thread)
     stop_udp_thread(udp_thread2_stop_event, udp_thread2)
     stop_udp_thread(udp_thread3_stop_event, udp_thread3)
+    stop_udp_thread(udp_thread4_stop_event, udp_thread4)
 
+
+    # if request.method == 'GET':
     network_info = get_network_info()
     return render_template('calibration_page.html', network_info=network_info)
 
@@ -296,6 +306,28 @@ def uwb_udp():
     
     network_info = get_network_info()
     return render_template('uwb_calibration.html', network_info=network_info)
+
+@app.route('/imuUWB_fusion', methods=['GET', 'POST'])
+def uwb_udp2():
+    global udp_thread_running, udp_thread2, state, udp_thread, udp_thread4
+    stop_udp_thread(udp_thread4_stop_event, udp_thread4)  # Ensure the previous thread is stopped
+
+    if request.method == 'POST':
+        # Start the UDP thread
+            
+
+        udp_thread4 = start_udp_thread(uwb_udp_listener2, udp_thread4_stop_event)
+        print("UDP thread4 started")
+    # elif request.method == 'POST':
+    #     # Stop the UDP thread
+    #     udp_thread_running = False
+    #     if udp_thread2:
+    #         udp_thread2.join()
+    #         print("UDP thread2 stopped")
+    
+    network_info = get_network_info()
+    return render_template('imuUWB_fusion.html', network_info=network_info)
+
 
 # @app.route('/set_anchor_positions', methods=['POST'])
 # def set_anchor_positions():
@@ -528,7 +560,187 @@ def set_anchor_positions():
 
     return jsonify({"status": "success", "anchor_positions": anchor_positions})
 
+######################################################################################
+#####################$$------     Kalman Filter   -------$$$$$$#######################
+######################################################################################
 
+class KalmanFilter:
+    def __init__(self, dt, process_noise_cov, measurement_noise_cov, estimation_error_cov):
+        # Time step
+        self.dt = dt
+        
+        # State vector: [x, y, vx, vy]
+        self.x = np.zeros(4)
+        
+        # State transition matrix
+        self.A = np.array([
+            [1, 0, self.dt, 0],
+            [0, 1, 0, self.dt],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
+        ])
+        
+        # Control input matrix
+        self.B = np.array([
+            [0.5 * self.dt**2, 0],
+            [0, 0.5 * self.dt**2],
+            [self.dt, 0],
+            [0, self.dt]
+        ])
+        
+        # Measurement matrix
+        self.H = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0]
+        ])
+        
+        # Covariance matrices
+        self.P = estimation_error_cov  # Estimation error covariance
+        self.Q = process_noise_cov  # Process noise covariance
+        self.R = measurement_noise_cov  # Measurement noise covariance
+
+    def predict(self, u):
+        # Predict the state vector
+        self.x = np.dot(self.A, self.x) + np.dot(self.B, u)
+        
+        # Predict the error covariance matrix
+        self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
+        
+        return self.x[:2]  # Return predicted position (x, y)
+
+    def update(self, z):
+        # Kalman gain
+        S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
+        K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))
+        
+        # Update the state vector with measurement z
+        y = z - np.dot(self.H, self.x)  # Innovation (measurement residual)
+        self.x += np.dot(K, y)
+        
+        # Update the error covariance matrix
+        I = np.eye(self.P.shape[0])
+        self.P = np.dot(I - np.dot(K, self.H), self.P)
+        
+        return self.x[:2]  # Return updated position (x, y)
+
+
+# Example usage
+def imuUWB_fusion_kalman(imu_data, uwb_data, dt):
+    # Initialize Kalman Filter
+    kf = KalmanFilter(
+        dt=dt,
+        process_noise_cov=np.eye(4) * 0.01,  # Process noise covariance
+        measurement_noise_cov=np.eye(2) * 0.1,  # Measurement noise covariance
+        estimation_error_cov=np.eye(4)  # Initial estimation error covariance
+    )
+    
+    position_estimates = []
+    
+    for imu_entry in imu_data:
+        Tio_imu, accel, _ = imu_entry  # Use only acceleration
+        
+        # Predict step with IMU data
+        predicted_position = kf.predict(u=np.array([accel[0], accel[1]]))
+        print(f"Predicted Position: {predicted_position}")
+        
+        # If UWB data is available, update the Kalman filter
+        if uwb_data:
+            for uwb_entry in uwb_data:
+                Tio_uwb, _, uwb_position = uwb_entry
+                
+                # Update step with UWB data
+                corrected_position = kf.update(z=uwb_position[:2])
+                print(f"Corrected Position with UWB: {corrected_position}")
+                position_estimates.append(corrected_position)
+    
+    return position_estimates
+
+#######################################################################################
+
+dt = 0.1  # Time step, adjust based on your system
+kf = KalmanFilter(
+    dt=dt,
+    process_noise_cov=np.eye(4) * 0.01,
+    measurement_noise_cov=np.eye(2) * 0.1,
+    estimation_error_cov=np.eye(4)
+)
+
+def uwb_udp_listener2(stop_event2):
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
+
+    sock.bind((UDP_IP, UDP_PORT))
+
+    last_received_time = time.time()
+    visible_device = False
+
+    buffer = bytearray()
+    UWB_SEPARATOR= b'cba/'
+
+    lock = threading.Lock()
+
+    global off1, off2, off3
+    global dist1, dist2, dist3
+    global dist10, dist20, dist30
+
+        # Example usage (filling with dummy data)
+    imu_data = []  # List to hold batches of IMU data
+    uwb_data = []  # List to hold UWB data when available
+    
+    while not stop_event2.is_set():
+
+
+        try:
+            sock.settimeout(10)
+
+            data, addr = sock.recvfrom(4096)
+            buffer.extend(data)
+            # print(f"Buffer length: {len(buffer)}")
+        # Simulated data stream handling loop
+
+            # Process IMU data (simulating IMU readings at 200Hz)
+            while len(buffer) >= 32:  # Each IMU packet is 32 bytes
+                start_index = buffer.find(b'abc/')
+                if start_index == -1:
+                    break
+                end_index = start_index + 32
+                part = buffer[start_index + 4:end_index]
+                buffer = buffer[end_index:]
+                imu_entry = struct.unpack('<7f', part)  # Unpack the IMU data
+                imu_data.append(imu_entry)
+
+
+            # Process UWB data (simulating UWB readings at 10Hz)
+            while len(buffer) >= 16:  # Each UWB packet is 16 bytes
+                start_index = buffer.find(UWB_SEPARATOR)
+                if start_index == -1:
+                    break
+                end_index = start_index + 16
+                part = buffer[start_index + len(UWB_SEPARATOR):end_index]
+                buffer = buffer[end_index:]
+                uwb_entry = struct.unpack('<3f', part)  # Unpack the UWB data
+                uwb_data.append(uwb_entry)
+
+            # Apply Kalman filter fusion
+            if imu_data or uwb_data:
+                for imu_entry in imu_data:
+                    Tio, accel, gyro = imu_entry[0], imu_entry[1:4], imu_entry[4:7]
+                    kf.predict(u=np.array([accel[0], accel[1]]))
+
+                for uwb_entry in uwb_data:
+                    Tio_uwb, x_uwb, y_uwb = uwb_entry[0], uwb_entry[1], uwb_entry[2]
+                    position = kf.update(z=np.array([x_uwb, y_uwb]))
+                    print(f"Position Estimate: {position}")
+
+                # Clear the data lists after processing
+                imu_data.clear()
+                uwb_data.clear()
+        except socket.timeout:
+            continue
+
+    sock.close()
+    print("UDP listener thread4 terminated.")
 
 
 
