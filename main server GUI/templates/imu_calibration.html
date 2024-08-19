@@ -1041,10 +1041,10 @@ window.addEventListener('beforeunload', function (event) {
             const timerContainer = document.getElementById('timerDisplayContainer');
 
                 const startStopButton = document.getElementById('startStopButton');
-            if(isSerialPortOpen === false) {
-                alert('Please open the serial port first.');
-                return; 
-            }
+         //   if(isSerialPortOpen === false) {
+            //    alert('Please open the serial port first.');
+           ///     return; 
+            ///}
             if (isRecording) {
             // Stop Recording Logic
             console.log("send stop req")

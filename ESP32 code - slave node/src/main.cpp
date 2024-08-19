@@ -9,11 +9,15 @@
 #include "esp_task_wdt.h"   // For Task Watchdog Timer functions
 #include "esp_int_wdt.h"    // For Interrupt Watchdog Timer functions
 #include "esp_timer.h"  // Include this for high-resolution timing
+#include "QMC5883LCompass.h"
 
 // Initialize the Task Watchdog Timer
 
 Bmi088Accel accel(SPI, 32);
 Bmi088Gyro gyro(SPI, 25);
+
+QMC5883LCompass compass;
+
 
 int16_t accelX_raw, accelY_raw, accelZ_raw;
 int16_t gyroX_raw, gyroY_raw, gyroZ_raw;
@@ -31,11 +35,6 @@ const uint8_t PIN_IRQ = 34; // irq pin
 const uint8_t PIN_SS = 5;   // spi select pin
 
 char tag_addr[] = "7D:00:22:EA:82:60:3B:9C";
-
-// Replace with your network credentials
-const char* sta_ssid = "D-Link";
-const char* sta_password = "09124151339";
-// char udpAddress[16];  // The IP address of the Python client (update this to match your PC's IP)
 
 const char* ap_ssid = "ESP32_AP";
 const char* ap_password = "12345678";
@@ -60,14 +59,18 @@ enum Mode {
   IMU_ONLY = 0,
   UWB_CALIBRATION = 1,
   UWB_DATA = 2,
-  IMU_UWB_DATA = 3
+  IMU_UWB_DATA = 3,
+  COMPASS = 4,
+  IMU_COMPASS = 5,
+  IMU_UWB_COMPASS = 6
 };
 
 Mode currentMode = IMU_UWB_DATA;
 
 const char* IMU_SEPARATOR = "abc/";
 const char* UWB_SEPARATOR = "cba/";
-
+const char* IMU_MAG_SEPARATOR = "img/";
+const char* MAG_SEPARATOR = "mag/";
 
 double myArray[7];
 typedef union {
@@ -80,6 +83,18 @@ typedef union {
   float floatingPoint;
   byte binary[4];
 } binaryFloat2;
+
+double myArray3[4];
+typedef union {
+  float floatingPoint;
+  byte binary[4];
+} binaryFloat3;
+
+double myArray4[10];
+typedef union {
+  float floatingPoint;
+  byte binary[4];
+} binaryFloat4;
 
 const char* check = "abc/";
 std::vector<uint8_t> batchData;
@@ -124,6 +139,19 @@ void handleModeChange() {
         currentMode = IMU_UWB_DATA;
         server.send(200, "text/plain", "Mode set to IMU_UWB_DATA");
         break;
+      case COMPASS:
+        currentMode = COMPASS;
+        server.send(200, "text/plain", "Mode set to COMPASS");
+        break;
+      case IMU_COMPASS:
+        currentMode = IMU_COMPASS;
+        server.send(200, "text/plain", "Mode set to IMU_COMPASS");
+        break;
+      case IMU_UWB_COMPASS:
+        currentMode = IMU_UWB_COMPASS;
+        server.send(200, "text/plain", "Mode set to IMU_UWB_COMPASS");
+        break;
+
         
       default:
         server.send(400, "text/plain", "Invalid mode");
@@ -215,6 +243,111 @@ void sendIMUData() {
   //   Serial.println(result);
   // }
 }
+
+void sendCompass() {
+  compass.read();
+
+  float tio_millis = static_cast<float>(millis());
+  Tio = tio_millis / 1000.0;
+
+  myArray3[0] = Tio;
+  myArray3[1] = compass.getX();
+  myArray3[2] = compass.getY();
+  myArray3[3] = compass.getZ();
+
+  Serial.print("X: ");
+  Serial.print(myArray3[1]);
+  Serial.print(" Y: ");
+  Serial.print(myArray3[2]);
+  Serial.print(" Z: ");
+  Serial.print(myArray3[3]);
+  Serial.println();
+  
+  delay(25);
+  
+  std::vector<uint8_t> magData;
+  // Add the MAG separator
+  magData.insert(magData.end(), MAG_SEPARATOR, MAG_SEPARATOR + strlen(MAG_SEPARATOR));
+
+  for (int i = 0; i < 4; i++) {
+    binaryFloat hi;
+    hi.floatingPoint = myArray3[i];
+    magData.insert(magData.end(), hi.binary, hi.binary + 4);
+  }
+
+  currentBatchCount++;
+    if (currentBatchCount >= batchSize) {
+
+    // Send the IMU data immediately
+    udp.beginPacket(udpAddress, udpPort);
+    udp.write(magData.data(), magData.size());
+    int result = udp.endPacket();
+    if (result == 1) {
+      // Serial.println("MAG data sent successfully");
+    } else {
+      Serial.print("Error sending MAG data: ");
+      Serial.println(result);
+    }
+  }
+}
+
+void sendIMU_MAG() {
+
+  int64_t startTime = esp_timer_get_time();  // Start timing
+
+  float tio_millis = static_cast<float>(millis());
+  Tio = tio_millis / 1000.0;
+  myArray4[0] = Tio;
+  myArray4[1] = accelX_raw;
+  myArray4[2] = accelY_raw;
+  myArray4[3] = accelZ_raw;
+  myArray4[4] = gyroX_raw;
+  myArray4[5] = gyroY_raw;
+  myArray4[6] = gyroZ_raw;
+  myArray4[7] = compass.getX();
+  myArray4[8] = compass.getY();
+  myArray4[9] = compass.getZ();
+
+  std::vector<uint8_t> imuMag;
+
+  // Add the IMU separator
+  imuMag.insert(imuMag.end(), IMU_MAG_SEPARATOR, IMU_MAG_SEPARATOR + strlen(IMU_MAG_SEPARATOR));
+
+  for (int i = 0; i < 10; i++) {
+    binaryFloat hi;
+    hi.floatingPoint = myArray4[i];
+    imuMag.insert(imuMag.end(), hi.binary, hi.binary + 4);
+  }
+
+  sendUdpPacket(imuMag, 10);  // Send the IMU data with 3 retries
+
+
+  // currentBatchCount++;
+  //   if (currentBatchCount >= batchSize) {
+
+    // Send the IMU data immediately
+    // udp.beginPacket(udpAddress, udpPort);
+    // udp.write(imuMag.data(), imuMag.size());
+    // int result = udp.endPacket();
+
+    
+  //   if (result == 1) {
+  //     // Serial.println("IMU data sent successfully");
+  //   } else {
+  //     Serial.print("Error sending IMU MAG data: ");
+  //     Serial.println(result);
+  //   }
+  // }
+
+  int64_t endTime = esp_timer_get_time();  // End timing
+  Serial.print("sendIMU_MagData execution time: ");
+  Serial.print((endTime - startTime) / 1000.0);  // Convert microseconds to milliseconds
+  Serial.println(" ms");
+// }
+}
+
+
+
 void newDevice(DW1000Device *device) {
   Serial.print("Device added: ");
   Serial.println(device->getShortAddress(), HEX);
@@ -232,7 +365,7 @@ void newRange() {
   std::vector<uint8_t> uwbData;
   float tio_millis = static_cast<float>(millis());
   Tio = tio_millis / 1000.0;
-  myArray[0] = Tio;
+  myArray2[0] = Tio;
 
   float dist = DW1000Ranging.getDistantDevice()->getRange();
   // float address = 
@@ -255,7 +388,7 @@ void newRange() {
   // udp.write(uwbData.data(), uwbData.size());
   // int result = udp.endPacket();
 
-  sendUdpPacket(uwbData, 5);
+  sendUdpPacket(uwbData, 10);
 
   int64_t endTime = esp_timer_get_time();  // End timing
   Serial.print("DW1000Ranging.loop execution time: ");
@@ -288,7 +421,8 @@ void setup() {
   Serial.print("AP IP address: ");
   Serial.println(AP_IP);
 
-  
+  compass.init();
+
 
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
   DW1000Ranging.initCommunication(PIN_RST, PIN_SS, PIN_IRQ); //Reset, CS, IRQ pin
@@ -329,12 +463,26 @@ void loop() {
 
   static unsigned long lastIMUSendTime = 0;
   static unsigned long lastRangeTime = 0;
+  static unsigned long lastMAGSendTime = 0;
+  static unsigned long lastIMUMAGSendTime = 0;
+  static unsigned long last = 0;
+
+
+  const int UWB_RATE = 15;    // at lower rate that 15Hz the output data will corrupt
+  const int IMU_RATE = 5;
+  const int MAG_RATE = 5;
+  const int IMUMAG_RATE = 5;
+
 
   unsigned long currentTime = millis();
 
+    if (sendData && currentTime - last >= 3000) {  // 10ms interval for IMU data
+      server.handleClient();
+      last = currentTime;}
+
   switch (currentMode) {
     case IMU_ONLY:
-      if (sendData && currentTime - lastIMUSendTime >= 10) {  // 10ms interval for IMU data
+      if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // 10ms interval for IMU data
         accel.readSensor();
         gyro.readSensor();
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
@@ -345,21 +493,21 @@ void loop() {
       break;
 
     case UWB_CALIBRATION:
-      if (calibration_in_progress && currentTime - lastRangeTime >= 50) {  // 50ms interval for UWB data
+      if (calibration_in_progress && currentTime - lastRangeTime >= UWB_RATE) {  // 50ms interval for UWB data
         DW1000Ranging.loop();
         lastRangeTime = currentTime;
       }
       break;
 
     case UWB_DATA:
-      if (currentTime - lastRangeTime >= 10) {
+      if (currentTime - lastRangeTime >= UWB_RATE) {
         DW1000Ranging.loop();
         lastRangeTime = currentTime;
       }
       break;
 
     case IMU_UWB_DATA:
-      if (sendData && currentTime - lastIMUSendTime >= 5) {  // IMU data every 10ms
+      if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // IMU data every 10ms
         accel.readSensor();
         gyro.readSensor();
         accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
@@ -367,10 +515,45 @@ void loop() {
         sendIMUData();
         lastIMUSendTime = currentTime;
       } 
-      if (currentTime - lastRangeTime >= 15) {  // UWB data every 50ms
+      if (currentTime - lastRangeTime >= UWB_RATE) {  // UWB data every 50ms
         safeRangingLoop();  // Call the safe loop function
         lastRangeTime = currentTime;
       }
+      break;
+
+    case COMPASS:
+      if (sendData && currentTime - lastMAGSendTime >= MAG_RATE) {  // IMU data every 10ms
+        sendCompass();
+        lastMAGSendTime = currentTime;
+      }
+      break;
+
+    case IMU_COMPASS:
+      if (sendData && currentTime - lastIMUMAGSendTime >= IMUMAG_RATE) {  // IMU data every 10ms
+
+        accel.readSensor();
+        gyro.readSensor();
+        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+        sendIMU_MAG();
+        lastIMUMAGSendTime = currentTime;
+      }
+      break;
+
+    case IMU_UWB_COMPASS:
+      if (sendData && currentTime - lastIMUMAGSendTime >= 10) {  // IMU data every 10ms
+        compass.read();
+        accel.readSensor();
+        gyro.readSensor();
+        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+        sendIMU_MAG();
+        lastIMUMAGSendTime = currentTime;
+      }
+      if (currentTime - lastRangeTime >= 15) { 
+        safeRangingLoop();  // Call the safe loop function
+        lastRangeTime = currentTime;
+      }        
       break;
 
     default:

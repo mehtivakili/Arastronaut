@@ -961,6 +961,7 @@ def read_serial_data(stop_event):
     acc_filename = f"acc-{timestamp}.csv"
     gyro_filename = f"gyro-{timestamp}.csv"
     mag_filename = f"mag-{timestamp}.csv"
+    uwb_filename = f"uwb-{timestamp}.csv"
     imu_uwb_filename = f"imu_uwb-{timestamp}.csv"
     global createdFlag
     createdFlag = True
@@ -1000,6 +1001,8 @@ def read_serial_data(stop_event):
 
     global off1, off2, off3
 
+    global dist10, dist20, dist30
+
 
     
     contor_uwb_view = 0
@@ -1013,7 +1016,10 @@ def read_serial_data(stop_event):
             sock.settimeout(10)
             data, addr = sock.recvfrom(4096)
             buffer.extend(data)
-            print(f"Buffer length: {len(buffer)}")
+            # print(f"Buffer length: {len(buffer)}")
+
+            current_time = time.time()
+
 
             # Process UWB data
             while len(buffer) >= UWB_PACKET_SIZE:
@@ -1030,22 +1036,131 @@ def read_serial_data(stop_event):
 
                 if len(part) == 12:  # 12 bytes: 4 for Tio, 2 for address, 4 for distance
                     # Tio, address, dist = struct.unpack('<3f', part)
-                    
-                    Tio = struct.unpack('f', data[4:8])[0]
+                    current_time_ns = time.time_ns()
+                    Tio = current_time_ns
+                    # Tio = struct.unpack('f', data[4:8])[0]
                     address = struct.unpack('f', data[8:12])[0]
                     distance = struct.unpack('f', data[12:16])[0]
-
+                    uwb_data1 = {
+                        'time': Tio,
+                        'short_address': address,
+                        'distance': distance - off1,
+                        'visible': True
+                    }
+                    
+                    uwb_data2 = {
+                        'time': Tio,
+                        'short_address': address,
+                        'distance': distance - off2,
+                        'visible': True
+                    }
+                    
+                    uwb_data3 = {
+                        'time': Tio,
+                        'short_address': address,
+                        'distance': distance - off3,
+                        'visible': True
+                    }
 
                     if address == 130:
-                        sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off1})
+                        # print(uwb_data1)
+                        dist1 = distance
+                        dist10 = distance - off1
+                        sio_client.emit('uwb_data', uwb_data1)  
+                        print(dist10)              
                     elif address == 131:
-                        sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off2})
+                        # print(uwb_data2)
+                        dist2 = distance
+                        dist20 = distance -off2
+                        print(dist20)
+                        sio_client.emit('uwb_data', uwb_data2)                
                     elif address == 133:
-                        sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off3})
+                        # print(uwb_data3)
+                        dist3 = distance
+                        dist30 = distance - off3
+                        print(dist30)
+                        sio_client.emit('uwb_data', uwb_data3)
+
+                                        # Calculate tag position once all distances are available
+                    if dist10 > 0 and dist20 > 0 and dist30 > 0:
+                        tag_position = calculate_tag_position(dist10, dist20, dist30)
+                        # print(dist10, dist20, dist30)
+                        # print(tag_position)
+                        sio_client.emit('tag_position', tag_position)
+
+
+                    # uwb_data = {
+                    #     'time': Tio,
+                    #     'short_address': address,
+                    #     'distance': distance,
+                    #     'visible': True
+                    # }
+
+                    # uwb_data = {
+                    #     'time': "tio",
+                    #     'short_address': "short_address",
+                    #     'distance': "distance",
+                    #     'visible': True
+                    # }
+                    # print(uwb_data)
+                    # sio_client.emit('uwb_data', uwb_data)
+                    # socketio.emit('uwb_data', uwb_data)
+                    last_received_time = current_time
+                    visible_device = True
+                    # print("uwb data sent!!!!!!!")
+                elif visible_device and (current_time - last_received_time > 3):
+                    uwb_data = {
+                        'visible': False
+                    }
+                    # sio2_client.emit('uwb_data', uwb_data)
+
+                    socketio.emit('uwb_data', uwb_data)
+                    visible_device = False
+
+
+                    # if address == 130:
+                    #     sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off1})
+                    # elif address == 131:
+                    #     sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off2})
+                    # elif address == 133:
+                    #     sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist + off3})
 
                     # print(f"UWB Data - Tio: {Tio:.3f}, Address: {address}, Distance: {dist:.2f}")
                     # sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist})
-                    
+                if Timer != 0:
+                    if start_time != 0:
+                        end_time = time.time()
+                        if (end_time - start_time < Timer):
+                            if address == 130:
+                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist10}"]
+                            elif address == 131:
+                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist20}"]
+                            elif address == 133:
+                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist30}"]
+
+                            with open(uwb_filename, mode='a', newline='') as uwb_file:
+                                uwb_writer = csv.writer(uwb_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                uwb_writer.writerow(formatted_uwb)
+
+                            # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{address:.3e}, {dist:.4e}"]
+                            # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{dist1:.3e}", f"{dist2:.3e}", f"{dist3:.3e}"]
+
+                            # print(formatted_imu_uwb)
+                            # with open(imu_uwb_filename, mode='a', newline='') as imu_uwb_file:
+                            #     imu_uwb_writer = csv.writer(imu_uwb_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                            #     imu_uwb_writer.writerow(formatted_imu_uwb)
+                            # createdFlag = True
+
+                        else:
+                            if createdFlag:
+                                print(f"{uwb_filename} created.")
+                                # print(f"{uwb_filename} is created.")
+
+                                createdFlag = False
+                    else:
+                        start_time = time.time()
+
+
 
 
             while len(buffer) >= 32:  # 4 bytes for the "abc/" and 28 bytes for the packet
@@ -1069,14 +1184,18 @@ def read_serial_data(stop_event):
                     if not set_offset:
                         offset = numbers[0]
                         set_offset = True
-                    
+
+                    current_time_ns = time.time_ns()
+
                     # Extract data
-                    Tio = numbers[0] - offset
+                    # Tio = numbers[0] - offset
+                    Tio = current_time_ns
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
                     # mag = numbers[7:10]
 
-                    print (f"Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
+                    # print (f"Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
+
                     # if(address != 0):
                         # print(f"Address: {address}, Distance: {dist}, Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
                     # print(f"Tio: {Tio}, Accel: {accel}, Gyro: {gyro}")
@@ -1160,8 +1279,10 @@ def read_serial_data(stop_event):
                         if start_time != 0:
                             end_time = time.time()
                             if (end_time - start_time < Timer):
-                                formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                                formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+                                # formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                                # formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+                                formatted_accel = [f"{Tio}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                                formatted_gyro = [f"{Tio}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
 
                                 with open(acc_filename, mode='a', newline='') as acc_file:
                                     acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
