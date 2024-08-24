@@ -65,7 +65,7 @@ enum Mode {
   IMU_UWB_COMPASS = 6
 };
 
-Mode currentMode = IMU_UWB_DATA;
+Mode currentMode = IMU_ONLY;
 
 const char* IMU_SEPARATOR = "abc/";
 const char* UWB_SEPARATOR = "cba/";
@@ -194,9 +194,9 @@ bool sendUdpPacket(std::vector<uint8_t>& data, int maxRetries = 3) {
         delay(5);  // Adjust delay as needed
     }
     
-    Serial.print("Failed to send UDP packet after ");
-    Serial.print(maxRetries);
-    Serial.println(" retries.");
+    // Serial.print("Failed to send UDP packet after ");
+    // Serial.print(maxRetries);
+    // Serial.println(" retries.");
     return false;
 }
 
@@ -230,12 +230,16 @@ void sendIMUData() {
   // udp.write(imuData.data(), imuData.size());
   // int result = udp.endPacket();
 
-  sendUdpPacket(imuData, 5);  // Send the IMU data with 3 retries
+  // sendUdpPacket(imuData, 5);  // Send the IMU data with 3 retries
+
+  // Send the data over serial
+  Serial.write(imuData.data(), imuData.size());
+
 
   int64_t endTime = esp_timer_get_time();  // End timing
-  Serial.print("sendIMUData execution time: ");
-  Serial.print((endTime - startTime) / 1000.0);  // Convert microseconds to milliseconds
-  Serial.println(" ms");
+  // Serial.print("sendIMUData execution time: ");
+  // Serial.print((endTime - startTime) / 1000.0);  // Convert microseconds to milliseconds
+  // Serial.println(" ms");
   // if (result == 1) {
   //   Serial.println("IMU data sent successfully");
   // } else {
@@ -255,13 +259,13 @@ void sendCompass() {
   myArray3[2] = compass.getY();
   myArray3[3] = compass.getZ();
 
-  Serial.print("X: ");
-  Serial.print(myArray3[1]);
-  Serial.print(" Y: ");
-  Serial.print(myArray3[2]);
-  Serial.print(" Z: ");
-  Serial.print(myArray3[3]);
-  Serial.println();
+  // Serial.print("X: ");
+  // Serial.print(myArray3[1]);
+  // Serial.print(" Y: ");
+  // Serial.print(myArray3[2]);
+  // Serial.print(" Z: ");
+  // Serial.print(myArray3[3]);
+  // Serial.println();
   
   delay(25);
   
@@ -285,8 +289,8 @@ void sendCompass() {
     if (result == 1) {
       // Serial.println("MAG data sent successfully");
     } else {
-      Serial.print("Error sending MAG data: ");
-      Serial.println(result);
+      // Serial.print("Error sending MAG data: ");
+      // Serial.println(result);
     }
   }
 }
@@ -340,22 +344,22 @@ void sendIMU_MAG() {
   // }
 
   int64_t endTime = esp_timer_get_time();  // End timing
-  Serial.print("sendIMU_MagData execution time: ");
-  Serial.print((endTime - startTime) / 1000.0);  // Convert microseconds to milliseconds
-  Serial.println(" ms");
+  // Serial.print("sendIMU_MagData execution time: ");
+  // Serial.print((endTime - startTime) / 1000.0);  // Convert microseconds to milliseconds
+  // Serial.println(" ms");
 // }
 }
 
 
 
 void newDevice(DW1000Device *device) {
-  Serial.print("Device added: ");
-  Serial.println(device->getShortAddress(), HEX);
+  // Serial.print("Device added: ");
+  // Serial.println(device->getShortAddress(), HEX);
 }
 
 void inactiveDevice(DW1000Device *device) {
-  Serial.print("delete inactive device: ");
-  Serial.println(device->getShortAddress(), HEX);
+  // Serial.print("delete inactive device: ");
+  // Serial.println(device->getShortAddress(), HEX);
 }
 
 bool UWB_init = false;
@@ -391,9 +395,9 @@ void newRange() {
   sendUdpPacket(uwbData, 10);
 
   int64_t endTime = esp_timer_get_time();  // End timing
-  Serial.print("DW1000Ranging.loop execution time: ");
-  Serial.print((endTime - startTime) / 1000.0);  // Convert microseconds to milliseconds
-  Serial.println(" ms");
+  // Serial.print("DW1000Ranging.loop execution time: ");
+  // Serial.print((endTime - startTime) / 1000.0);  // Convert microseconds to milliseconds
+  // Serial.println(" ms");
   // if (result == 1) {
   //   Serial.println("UWB data sent successfully");
   // } else {
@@ -409,17 +413,17 @@ void setup() {
 
   if (accel.begin(Bmi088Accel::RANGE_12G, Bmi088Accel::ODR_200HZ_BW_80HZ) < 0 ||
       gyro.begin(Bmi088Gyro::RANGE_1000DPS, Bmi088Gyro::ODR_200HZ_BW_64HZ) < 0) {
-    Serial.println("Sensor initialization failed");
+    // Serial.println("Sensor initialization failed");
     while (1);
   }
 
   // Set up access point (AP) mode
   WiFi.softAP(ap_ssid, ap_password);
   IPAddress AP_IP = WiFi.softAPIP();
-  Serial.print("AP SSID: ");
-  Serial.println(ap_ssid);
-  Serial.print("AP IP address: ");
-  Serial.println(AP_IP);
+  // Serial.print("AP SSID: ");
+  // Serial.println(ap_ssid);
+  // Serial.print("AP IP address: ");
+  // Serial.println(AP_IP);
 
   compass.init();
 
@@ -441,7 +445,7 @@ void setup() {
   server.begin();
 
 
-  Serial.println("HTTP server started");
+  // Serial.println("HTTP server started");
 }
 
 void logMemory() {
@@ -449,8 +453,8 @@ void logMemory() {
   unsigned long currentTime = millis();
 
   if (currentTime - lastLogTime >= 500) {  // Log memory every 500 milliseconds
-    Serial.print("Free heap: ");
-    Serial.println(ESP.getFreeHeap());
+    // Serial.print("Free heap: ");
+    // Serial.println(ESP.getFreeHeap());
     lastLogTime = currentTime;
   }
 }
@@ -476,7 +480,7 @@ void loop() {
 
   unsigned long currentTime = millis();
 
-    if (sendData && currentTime - last >= 3000) {  // 10ms interval for IMU data
+    if (sendData && currentTime - last >= 3000) {  // 10ms interval for web
       server.handleClient();
       last = currentTime;}
 

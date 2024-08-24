@@ -1036,9 +1036,9 @@ def read_serial_data(stop_event):
 
                 if len(part) == 12:  # 12 bytes: 4 for Tio, 2 for address, 4 for distance
                     # Tio, address, dist = struct.unpack('<3f', part)
-                    current_time_ns = time.time_ns()
-                    Tio = current_time_ns
-                    # Tio = struct.unpack('f', data[4:8])[0]
+                    # print(current_second_start)
+
+                    Tio = struct.unpack('f', data[4:8])[0]
                     address = struct.unpack('f', data[8:12])[0]
                     distance = struct.unpack('f', data[12:16])[0]
                     uwb_data1 = {
@@ -1128,15 +1128,18 @@ def read_serial_data(stop_event):
                     # print(f"UWB Data - Tio: {Tio:.3f}, Address: {address}, Distance: {dist:.2f}")
                     # sio_client.emit('UWB_data', {'Tio': Tio, 'address': address, 'distance': dist})
                 if Timer != 0:
-                    if start_time != 0:
+                    if start_time != 0:                    
+                        current_time_ns = time.time_ns()
+                        print("uwb time start: " + str(current_time_ns))
+                        final_time = (Tio * 1000000000) + current_time_ns
                         end_time = time.time()
                         if (end_time - start_time < Timer):
                             if address == 130:
-                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist10}"]
+                                formatted_uwb = [f"{final_time}", f"{address}", f"{dist10}"]
                             elif address == 131:
-                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist20}"]
+                                formatted_uwb = [f"{final_time}", f"{address}", f"{dist20}"]
                             elif address == 133:
-                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist30}"]
+                                formatted_uwb = [f"{final_time}", f"{address}", f"{dist30}"]
 
                             with open(uwb_filename, mode='a', newline='') as uwb_file:
                                 uwb_writer = csv.writer(uwb_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
@@ -1184,15 +1187,18 @@ def read_serial_data(stop_event):
                     if not set_offset:
                         offset = numbers[0]
                         set_offset = True
+                        current_time_ns2 = time.time_ns()
+                        print("imu time start: " + str(current_time_ns2))
 
-                    current_time_ns = time.time_ns()
+
 
                     # Extract data
-                    # Tio = numbers[0] - offset
-                    Tio = current_time_ns
+                    Tio = numbers[0] - offset
+                    # Tio = current_time_ns
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
                     # mag = numbers[7:10]
+                    final_time2 = (Tio *  1000000000) + current_time_ns2
 
                     # print (f"Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
 
@@ -1281,8 +1287,8 @@ def read_serial_data(stop_event):
                             if (end_time - start_time < Timer):
                                 # formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
                                 # formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
-                                formatted_accel = [f"{Tio}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                                formatted_gyro = [f"{Tio}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+                                formatted_accel = [f"{final_time2}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                                formatted_gyro = [f"{final_time2}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
 
                                 with open(acc_filename, mode='a', newline='') as acc_file:
                                     acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
