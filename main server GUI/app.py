@@ -1141,11 +1141,11 @@ def read_serial_data(stop_event):
                         end_time = time.time()
                         if (end_time - start_time < Timer):
                             if address == 130:
-                                formatted_uwb = [f"{final_time}", f"{address}", f"{dist10}"]
+                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist10}"]
                             elif address == 131:
-                                formatted_uwb = [f"{final_time}", f"{address}", f"{dist20}"]
+                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist20}"]
                             elif address == 133:
-                                formatted_uwb = [f"{final_time}", f"{address}", f"{dist30}"]
+                                formatted_uwb = [f"{Tio}", f"{address}", f"{dist30}"]
 
                             with open(uwb_filename, mode='a', newline='') as uwb_file:
                                 uwb_writer = csv.writer(uwb_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)

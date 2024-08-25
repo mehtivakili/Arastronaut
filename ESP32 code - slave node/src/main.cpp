@@ -10,6 +10,19 @@
 #include "esp_int_wdt.h"    // For Interrupt Watchdog Timer functions
 #include "esp_timer.h"  // Include this for high-resolution timing
 #include "QMC5883LCompass.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+// Task handle
+TaskHandle_t sendIMUTaskHandle = NULL;
+volatile bool imuDataReadyToSend = false;
+
+
+
+
+extern volatile int counter;
+extern volatile int uwbReady;
+
 
 // Initialize the Task Watchdog Timer
 
@@ -164,14 +177,14 @@ void handleModeChange() {
   }
 }
 
-volatile int counter = 0;  // Use volatile to tell the compiler this variable can be changed unexpectedly
+volatile int counter2 = 0;  // Use volatile to tell the compiler this variable can be changed unexpectedly
 volatile int imuReady = 0;
 
 unsigned long startTime = 0;
 int Count = 0;
 void imuInt(){
   // if (counter == 0){
-      counter = counter + 1;
+      counter2 = counter2 + 1;
 
   // unsigned long startTime = millis();
   // }
@@ -299,6 +312,20 @@ void sendIMUData() {
   //   Serial.print("Error sending IMU data: ");
   //   Serial.println(result);
   // }
+}
+
+void sendIMUTask(void * parameter) {
+    for (;;) {
+        if (imuDataReadyToSend) {
+            imuDataReadyToSend = false;
+
+            // Send IMU data
+            sendIMUData();
+
+            // Optionally, add some delay or task yield if necessary
+            vTaskDelay(2);
+        }
+    }
 }
 
 void sendCompass() {
@@ -536,6 +563,15 @@ void setup() {
 
   compass.init();
 
+    // Create the task for sending IMU data on Core 1
+    xTaskCreatePinnedToCore(
+        sendIMUTask,     // Function to implement the task
+        "SendIMUTask",   // Name of the task
+        10000,           // Stack size in words
+        NULL,            // Task input parameter
+        1,               // Priority of the task
+        &sendIMUTaskHandle, // Task handle
+        0);              // Core where the task should run (Core 1)
 
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
   DW1000Ranging.initCommunication(PIN_RST, PIN_SS, PIN_IRQ); //Reset, CS, IRQ pin
@@ -571,7 +607,7 @@ void logMemory() {
 
 void loop() {
 
-    // DW1000Ranging.loop();
+    DW1000Ranging.loop();
 
     static unsigned long lastIMUSendTime = 0;
     static unsigned long lastRangeTime = 0;
@@ -587,12 +623,12 @@ void loop() {
     // unsigned long currentTime = micros();  // Use micros() for higher resolution
 
     // if (sendData && currentTime - last >= 3000000) {  // Handle web requests every 3000 ms (3 seconds)
-    //     server.handleClient();
+        server.handleClient();
     //     last = currentTime;
     // }
 
     static unsigned long lastCheckTime = 0;
-    static int lastCounter = 0;
+    // static int lastCounter = 0;
 
     unsigned long currentTime = millis();
 
@@ -601,27 +637,41 @@ void loop() {
         // Disable interrupts while reading shared variable
         noInterrupts();
         int countInLastSecond = counter;
+        int countInLastSecond2 =counter2;
         counter = 0;  // Reset the counter
+        counter2 = 0;
         interrupts();
 
-        Serial.print("Interrupts in last second: ");
+        Serial.print("Interrupts in last UWB second: ");
         Serial.println(countInLastSecond);
+        Serial.print("Interrupts in last IMU second: ");
+        Serial.println(countInLastSecond2);
 
         lastCheckTime = currentTime;
     }
 
-    switch (56) {
+    switch (0) {
         case IMU_ONLY:
             // if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // 5 ms interval for IMU data
               if (imuReady == 1){
-                      Serial.println(counter);
+                      // Disable UWB interrupt while processing IMU data
+                      detachInterrupt(digitalPinToInterrupt(34));
+                      // noInterrupts();
+                      // Serial.println(counter);
+                        // Serial.println(Count);
+                      bmi.readSensor();
+                      bmi.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw, &gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                      // noInterrupts();
 
-                  // Serial.println(Count);
-                // bmi.readSensor();
-                // bmi.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw, &gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                      // Set the flag to signal the task on Core 1 to send IMU data
+                      imuDataReadyToSend = true;
 
-                // sendIMUData();
-                imuReady = 0;
+                      // sendIMUData();
+                      imuReady = 0;
+                      // Re-enable UWB interrupt after IMU processing
+                      attachInterrupt(digitalPinToInterrupt(34), DW1000Class::handleInterrupt, RISING);
+    
+                      // interrupts();
               }
 
                 // lastIMUSendTime = currentTime;
@@ -636,10 +686,10 @@ void loop() {
             break;
 
         case UWB_DATA:
-            if (currentTime - lastRangeTime >= UWB_RATE) {  // 15 ms interval for UWB data
-                DW1000Ranging.loop();
-                lastRangeTime = currentTime;
-            }
+            // if (currentTime - lastRangeTime >= UWB_RATE) {  // 15 ms interval for UWB data
+            //     DW1000Ranging.loop();
+            //     lastRangeTime = currentTime;
+            // }
             break;
 
         case IMU_UWB_DATA:

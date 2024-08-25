@@ -705,8 +705,12 @@ void DW1000Class::tune() {
 /* ###########################################################################
  * #### Interrupt handling ###################################################
  * ######################################################################### */
+volatile int counter = 0;  // Use volatile to tell the compiler this variable can be changed unexpectedly
+volatile int uwbReady = 0;
 
 void DW1000Class::handleInterrupt() {
+	counter++;
+	uwbReady = 1;
 	// read current status and handle via callbacks
 	readSystemEventStatusRegister();
 	if(isClockProblem() /* TODO and others */ && _handleError != 0) {
