@@ -963,6 +963,7 @@ def read_serial_data(stop_event):
     mag_filename = f"mag-{timestamp}.csv"
     uwb_filename = f"uwb-{timestamp}.csv"
     imu_uwb_filename = f"imu_uwb-{timestamp}.csv"
+    imu_ros_filename = f"imu_ros-{timestamp}.csv"
     global createdFlag
     createdFlag = True
 
@@ -1166,26 +1167,26 @@ def read_serial_data(stop_event):
 
 
 
-            while len(buffer) >= 32:  # 4 bytes for the "abc/" and 28 bytes for the packet
+            while len(buffer) >= 36:  # 4 bytes for the "abc/" and 28 bytes for the packet
                 start_index = buffer.find(check_encoded)
                 if start_index == -1:
                     break  # "abc/" not found, wait for more data
 
 
-                end_index = start_index + len(check_encoded) + 28
+                end_index = start_index + len(check_encoded) + 32
                 if end_index > len(buffer):
                     break  # Not enough data for a full packet, wait for more data
 
                 part = buffer[start_index + len(check_encoded):end_index]
                 buffer = buffer[end_index:]  # Remove the processed part from the buffer
 
-                if len(part) == 28:   # 28 bytes for the packet (Tio accx accy accz gyrox gyroy gyroz) 4*7 + (magx magy magz) 4*3 = 40
-                    numbers = struct.unpack('<7f', part)
+                if len(part) == 32:   # 28 bytes for the packet (Tio accx accy accz gyrox gyroy gyroz) 4*7 + (magx magy magz) 4*3 = 40
+                    numbers = struct.unpack('<q6f', part)
                     # Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
                     # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
                     
                     if not set_offset:
-                        offset = numbers[0]
+                        offset = numbers[0]/1e9
                         set_offset = True
                         current_time_ns2 = time.time_ns()
                         print("imu time start: " + str(current_time_ns2))
@@ -1193,10 +1194,11 @@ def read_serial_data(stop_event):
 
 
                     # Extract data
-                    Tio = numbers[0] - offset
+                    Tio = (numbers[0]/1e9) - offset
                     # Tio = current_time_ns
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
+                    print(Tio)
                     # mag = numbers[7:10]
                     final_time2 = (Tio *  1000000000) + current_time_ns2
 
@@ -1272,7 +1274,7 @@ def read_serial_data(stop_event):
                     # Check for Tio change and calculate rate
                     if int(Tio) != current_second_start:
                         # Print the rate for the last second
-                        # print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
+                        print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
 
                         # Reset the packet count for the new second
                         packets_count = 0
@@ -1281,21 +1283,30 @@ def read_serial_data(stop_event):
                     # Increment the packet count for the current second
                     packets_count += 1
                     last_Tio = Tio
+                    MODE = "ROS"
                     if Timer != 0:
                         if start_time != 0:
                             end_time = time.time()
                             if (end_time - start_time < Timer):
-                                # formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                                # formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
-                                formatted_accel = [f"{final_time2}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
-                                formatted_gyro = [f"{final_time2}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+                                if (MODE == "imu_tk"):
+                                    formatted_accel = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}"]
+                                    formatted_gyro = [f"{Tio:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
 
-                                with open(acc_filename, mode='a', newline='') as acc_file:
-                                    acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    acc_writer.writerow(formatted_accel)
-                                with open(gyro_filename, mode='a', newline='') as gyro_file:
-                                    gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
-                                    gyro_writer.writerow(formatted_gyro)
+                                    with open(acc_filename, mode='a', newline='') as acc_file:
+                                        acc_writer = csv.writer(acc_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                        acc_writer.writerow(formatted_accel)
+                                    with open(gyro_filename, mode='a', newline='') as gyro_file:
+                                        gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
+                                        gyro_writer.writerow(formatted_gyro)
+
+                                elif (MODE == "ROS"):
+                                    formatted_imu_ros = [final_time2, f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
+
+                                    with open(imu_ros_filename, mode='a', newline='') as imu_ros_file:
+                                        imu_ros_writer = csv.writer(imu_ros_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+                                        imu_ros_writer.writerow(formatted_imu_ros)
+
+
                                 # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{address:.3e}, {dist:.4e}"]
                                 # formatted_imu_uwb = [f"{Tio:.7e}", f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}", f"{dist1:.3e}", f"{dist2:.3e}", f"{dist3:.3e}"]
 
@@ -1395,7 +1406,7 @@ def start_recording():
         if True:
             # numbers = struct.unpack('<7f', data)
             createdFlag = True
-            offset = numbers[0]
+            offset = numbers[0]/1e9
             timestamp = datetime.now().strftime("%Y%m%d%H%M")
             acc_filename = f"acc-{timestamp}.csv"
             gyro_filename = f"gyro-{timestamp}.csv"
