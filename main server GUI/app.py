@@ -132,6 +132,9 @@ anchor_positions = {
 
 state = "imu"
 
+global MODE
+MODE = "imu_tk"
+
 FIRMWARE_BASE_PATH = 'firmwares'
 serial_port = None
 serial_thread = None
@@ -234,11 +237,11 @@ def firmware():
     
 @app.route('/data_acquisition', methods=['GET', 'POST'])
 def data_acquisition():
-    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
+    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3, MODE
     stop_udp_thread(udp_thread3_stop_event, udp_thread3)  # Ensure the previous thread is stopped
 
     if request.method == 'POST':
-
+        MODE = "ros"
         udp_thread3 = start_udp_thread(read_serial_data, udp_thread3_stop_event)
         print("UDP thread started")
 
@@ -425,13 +428,13 @@ def python_serial():
 #             return render_template('python_UDP.html', network_info=network_info)
 @app.route('/imu_calibration', methods=['GET', 'POST'])
 def imu_calib():
-    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
+    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3, MODE
     if request.method == 'POST':
         stop_udp_thread(udp_thread2_stop_event, udp_thread2)  # Ensure the previous thread is stopped
-
+        MODE = "imu_tk"
         udp_thread2 = start_udp_thread(read_serial_data, udp_thread2_stop_event)
         print("IMU calib thread started")
- 
+
         # stop_udp_thread(udp_thread_stop_event, udp_thread)
  
         # udp_thread = start_udp_thread(read_serial_data, udp_thread_stop_event)
@@ -1004,11 +1007,13 @@ def read_serial_data(stop_event):
 
     global dist10, dist20, dist30
 
-
+    global MODE
     
     contor_uwb_view = 0
 
-    print("why the ..")
+    # print("why the ..")
+    print("MODE is ")
+    print(MODE)
     time.sleep(5)
     while not stop_event.is_set():
         # if(state == "imu"):
@@ -1198,7 +1203,7 @@ def read_serial_data(stop_event):
                     # Tio = current_time_ns
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
-                    print(Tio)
+                    # print(Tio)
                     # mag = numbers[7:10]
                     final_time2 = (Tio *  1000000000) + current_time_ns2
 
@@ -1275,7 +1280,7 @@ def read_serial_data(stop_event):
                     if int(Tio) != current_second_start:
                         # Print the rate for the last second
                         print(f"Tio: {Tio}, Data rate: {packets_count} packets in the last second")
-
+                        sio_client.emit("data_rate", packets_count)
                         # Reset the packet count for the new second
                         packets_count = 0
                         current_second_start = int(Tio)
@@ -1283,7 +1288,7 @@ def read_serial_data(stop_event):
                     # Increment the packet count for the current second
                     packets_count += 1
                     last_Tio = Tio
-                    MODE = "ROS"
+                    # MODE = "ROS"
                     if Timer != 0:
                         if start_time != 0:
                             end_time = time.time()
@@ -1299,7 +1304,7 @@ def read_serial_data(stop_event):
                                         gyro_writer = csv.writer(gyro_file, delimiter=' ', quoting=csv.QUOTE_MINIMAL)
                                         gyro_writer.writerow(formatted_gyro)
 
-                                elif (MODE == "ROS"):
+                                elif (MODE == "ros"):
                                     formatted_imu_ros = [final_time2, f"{accel[0]:.7e}", f"{accel[1]:.7e}", f"{accel[2]:.7e}", f"{gyro[0]:.7e}", f"{gyro[1]:.7e}", f"{gyro[2]:.7e}"]
 
                                     with open(imu_ros_filename, mode='a', newline='') as imu_ros_file:

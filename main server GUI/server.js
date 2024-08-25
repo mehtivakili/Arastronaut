@@ -51,6 +51,11 @@ io.on('connection', (socket) => {
     io.emit("tag_position", data);
   })
 
+  socket.on('data_rate', (data) =>{
+    console.log("data rate is "+ data);
+    io.emit("data_rate", data);
+  })
+
   // Handle disconnection events
   socket.on('disconnect', () => {
     console.log('user disconnected');

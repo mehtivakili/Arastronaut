@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python Serial Monitor</title>
+    <title>Data Acquisition</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         body {
@@ -57,7 +57,7 @@
             overflow: hidden;
         }
         .side-container {
-            width: 30%;
+            width: 35%;
             background-color: rgba(30, 30, 30, 0.8); /* More transparent */
             padding: 20px;
             margin-left: 10px;
@@ -540,14 +540,14 @@ body.light-theme .collapsible-toggle:hover {
         </script>
         
         <div class="top-container">
-            <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
+            <button class="back-button" onclick="window.location.href='/calibration'">Back to Home</button>
             <h1>Data Acquisition</h1>
         </div>
         <div class="main-container">
             <div class="side-container">
                 <button class="theme-toggle-button" style="display: none;" onclick="toggleTheme()">Toggle Theme</button>
 
-                <div id="configSerial">
+                <!-- <div id="configSerial">
                     <h2>Select Serial Port</h2>
                     <form onsubmit="event.preventDefault(); openSerial();">
                         <div class="input-group">
@@ -556,11 +556,11 @@ body.light-theme .collapsible-toggle:hover {
                         </div>
                         <button onclick="clearPlots()"  type="submit">Open Serial Port</button>
                     </form>
-                </div>
+                </div> -->
 
-                <h1>ESP32 IMU Data Control</h1>
+                <h1>IMU Data Control</h1>
                 <button onclick="startData()">Start Data Transmission</button>
-                <button onclick="stopData()">Stop Data Transmission</button>
+                <button style="margin-bottom: 5%;" onclick="stopData()">Stop Data Transmission</button>
 
                 <script>
                     function startData() {
@@ -579,9 +579,11 @@ body.light-theme .collapsible-toggle:hover {
                 </script>
                 <!-- <div class="collapsible-section">
                     <div class="collapsible-header" onclick="toggleCollapsible(this)"> -->
-                        <h3>Plot Controller</h3>
                     <!-- </div>
                     <div class="collapsible-content"> -->
+                <div style="display: block;">
+                    <div id="plot_control" style="display: none; padding-top: 10%;">
+                        <h3>Plot Controller</h3>
 
                         <div class="input-group">
                             <label for="cycleCounterRange">Cycle Counter</label>
@@ -595,8 +597,14 @@ body.light-theme .collapsible-toggle:hover {
                             <span id="batchSizeValue">20</span>
                             <small>Set the number of samples in each batch</small>
                         </div>
-                        <div class="input-group">
-                            <label for="sendingRate">Network Sending Rate</label>
+                    </div>
+                        <!-- Checkbox to toggle the display -->
+                    <label>
+                        <input style="align-tracks: center; padding-top: 5%;" type="checkbox" id="toggleCheckbox" onclick="togglePlotControl()">
+                    </label>
+                </div>
+                        <div style="padding-top: 10%; padding-bottom: 10%;" class="input-group">
+                            <label for="sendingRate">Plot Visualization Rate</label>
                             <div id="sendingRate">200 ms</div>
                         </div>
                         <!-- <button class="collapsible-toggle" onclick="toggleCollapsible(this.parentElement)">▲ Collapse</button>
@@ -611,19 +619,22 @@ body.light-theme .collapsible-toggle:hover {
                 </div>
                 <div class="input-row" id="recordParams">
                     <div class="input-group">
-                        <label for="initiationStaticInterval">Init Static T</label>
-                        <input type="number" id="initiationStaticInterval" name="initiationStaticInterval" placeholder="50" value="50" required>
-                        <span class="info-icon" title="Recommended: 50 seconds">ℹ️</span>
+                        <label for="initiationStaticInterval">Record Time</label>
+                        <input type="number" id="initiationStaticInterval" name="initiationStaticInterval" placeholder="300" value="300" required>
+                        <!-- <span class="info-icon" title="Recommended: 50 seconds">ℹ️</span> -->
                     </div>
-                    <div class="input-group">
+                    <div style="display: none;" class="input-group">
                         <label for="turnCounts">Turn Counts</label>
-                        <input type="number" id="turnCounts" name="turnCounts" placeholder="40" value="40" required>
-                        <span class="info-icon" title="Recommended: 36 to 50 turns">ℹ️</span>
+                        <input type="number" id="turnCounts" name="turnCounts" placeholder="40" value="0" required>
+                        <!-- <span class="info-icon" title="Recommended: 36 to 50 turns">ℹ️</span> -->
                     </div>
-                    <div class="input-group">
+                    <div style="display: none;" class="input-group">
                         <label for="T_wait">T_wait</label>
-                        <input type="number" id="T_wait" name="T_wait" placeholder="4" value="4" required>
-                        <span class="info-icon" title="Recommended: 1 to 4 seconds">ℹ️</span>
+                        <input type="number" id="T_wait" name="T_wait" placeholder="4" value="0" required>
+                        <!-- <span class="info-icon" title="Recommended: 1 to 4 seconds">ℹ️</span> -->
+                    </div>
+                    <div>
+                        <button id="startStopButton" onclick="toggleRecording()">Start Recording</button>
                     </div>
                 </div>
                 
@@ -633,6 +644,12 @@ body.light-theme .collapsible-toggle:hover {
                         <div id="timerDisplay" style="display: none; color: white;"></div>
                     </div>
                 </div>
+                <div>Data Rate is :
+                    <div id="dataRate"></div>
+
+                </div>
+                
+            <div style="display: none;">
                 <p id="flashMessage" class="flash" style="display: none;">Turn the device</p>
                 <p id="latexEquation">Total time = Initiation Static Interval + Turn Counts * T_wait</p>
                 <script>
@@ -644,9 +661,7 @@ body.light-theme .collapsible-toggle:hover {
                         font-size: 12px;
                     }
                 </style>
-                <div class="input-group">
-                    <button id="startStopButton" onclick="toggleRecording()">Start Recording</button>
-                </div>
+
                 <div class="input-row" id="actionButtons" style="display: none;">
                     <button id="backButton" onclick="goBack()">Back</button>
                     <button id="plotButton" onclick="plotThis()">Plot This</button>
@@ -657,13 +672,13 @@ body.light-theme .collapsible-toggle:hover {
                 <input type="file" id="accFileInput" accept=".calib">
                 <input type="file" id="gyroFileInput" accept=".calib">
                 <button type="button" onclick="uploadCalibrationFiles()">Upload Calibration Files</button>
-
+            </div>
                 
             </div>
             <div class="serial-monitor">
                 <div class="plot-container" id="accelPlot"></div>
                 <div class="plot-container" id="gyroPlot"></div>
-                <div class="plot-container" id="UWBPlot"></div>
+                <!-- <div class="plot-container" id="UWBPlot"></div> -->
 
                 <div class="log" id="log">
                     <!-- Serial log will appear here -->
@@ -714,72 +729,93 @@ body.light-theme .collapsible-toggle:hover {
         let TioData = [];
         let accelX = [], accelY = [], accelZ = [];
         let gyroX = [], gyroY = [], gyroZ = [];
-        let UWB_Time = [];
-        let UWB_d1 = []; UWB_d2 = []; UWB_d3 = [];
+        // let UWB_Time = [];
+        // let UWB_d1 = []; UWB_d2 = []; UWB_d3 = [];
 
         // socket.on('sensor_data', function(data){
         //     console.log('aaa',data)
         // })
-        contor = 0
-        function updateUWBData(data) {
-            const logElement = document.getElementById('log');
-            // console.log(data.address)
-            // console.log(`Tio : ${data.Tio}`)
+        // contor = 0
+        // function updateUWBData(data) {
+        //     const logElement = document.getElementById('log');
+        //     // console.log(data.address)
+        //     // console.log(`Tio : ${data.Tio}`)
 
-            // Assuming data is an array of objects with address and distance properties
-            //data.sort((a, b) => a.address - b.address); // Sort data by address
-            // logElement.innerHTML = ''; // Clear existing log
+        //     // Assuming data is an array of objects with address and distance properties
+        //     //data.sort((a, b) => a.address - b.address); // Sort data by address
+        //     // logElement.innerHTML = ''; // Clear existing log
 
-            // data.forEach(item => {
-                const logEntry = document.createElement('div');
-                logEntry.textContent = `Address: ${data.address}, Distance: ${data.distance}`;
-                logElement.appendChild(logEntry);
-                UWB_Time.push(data.Tio2);
-                if(data.address == 130){
-                    UWB_d1.push(data.distance)
-                } else if (data.address == 131){
-                    UWB_d2.push(data.distance)
-                } else if (data.address == 133){
-                    UWB_d3.push(data.distance)
-                }
+        //     // data.forEach(item => {
 
-                console.log(UWB_d1)
+
+        //         const logEntry = document.createElement('div');
+        //         logEntry.textContent = `Address: ${data.address}, Distance: ${data.distance}`;
+        //         logElement.appendChild(logEntry);
+        //         UWB_Time.push(data.Tio2);
+        //         if(data.address == 130){
+        //             UWB_d1.push(data.distance)
+        //         } else if (data.address == 131){
+        //             UWB_d2.push(data.distance)
+        //         } else if (data.address == 133){
+        //             UWB_d3.push(data.distance)
+        //         }
+
+        //         console.log(UWB_d1)
                 
 
-                Plotly.update('UWBPlot', {
-                // x: [UWB_Time],
-                // y: [UWB_d1, UWB_d2, UWB_d3]
-                x: [UWB_Time],
-                y: [2, 3, 4]
-            })
+        //         Plotly.update('UWBPlot', {
+        //         // x: [UWB_Time],
+        //         // y: [UWB_d1, UWB_d2, UWB_d3]
+        //         x: [UWB_Time],
+        //         y: [2, 3, 4]
+        //     })
 
 
-                if (TioData.length > 500) {
-                UWB_Time.shift();
-                UWB_d1.shift();
-                UWB_d2.shift();
-                UWB_d3.shift();
-            }
-            // }
-        // );
-        }
-        socket.on('UWB_data', function(data) {
-            // console.log(data);
-            // updateUWBData(data);
-            const {Tio2, address, distance} = data;
+        //         if (TioData.length > 500) {
+        //         UWB_Time.shift();
+        //         UWB_d1.shift();
+        //         UWB_d2.shift();
+        //         UWB_d3.shift();
+        //     }
+        //     // }
+        // // );
+        // }
+        // socket.on('UWB_data', function(data) {
+        //     // console.log(data);
+        //     // updateUWBData(data);
+        //     const {Tio2, address, distance} = data;
 
             
 
-            updateUWBData(data);
+        //     updateUWBData(data);
 
-        });
+        // });
+
+                // Function to toggle the display of the plot_control div
+        function togglePlotControl() {
+            var plotControlDiv = document.getElementById("plot_control");
+            var checkbox = document.getElementById("toggleCheckbox");
+
+            if (checkbox.checked) {
+                plotControlDiv.style.display = "block";
+            } else {
+                plotControlDiv.style.display = "none";
+            }
+        }
+
+        socket.on('data_rate', function(data) {
+            const dataRate = data;
+            console.log(data);
+            document.getElementById("dataRate").textContent = dataRate
+        })
+
         socket.on('sensor_data', function(batch) {
             batch.forEach(data => {
                 //  console.log(data)
             
-            const { Tio, accel, gyro, mag } = data;
-            updateOrientation(accel, gyro, mag);
-            contor += 1;
+            const { Tio, accel, gyro } = data;
+            updateOrientation(accel, gyro);
+            // contor += 1;
             // console.log('Received data:', Tio, accel, gyro); // Debug statement
             // console.log(contor)
             TioData.push(Tio);
@@ -826,9 +862,9 @@ body.light-theme .collapsible-toggle:hover {
             gyroX = [];
             gyroY = [];
             gyroZ = [];
-            UWB_d1 = [];
-            UWB_d2 = [];
-            UWB_d3 = [];
+            // UWB_d1 = [];
+            // UWB_d2 = [];
+            // UWB_d3 = [];
 
             Plotly.update('accelPlot', {
                 x: [[]],
@@ -839,26 +875,26 @@ body.light-theme .collapsible-toggle:hover {
                 x: [[]],
                 y: [[], [], []]
             });
-            Plotly.update('UWBPlot', {
-                x: [[]],
-                y: [[], [], []]
-            })
+            // Plotly.update('UWBPlot', {
+            //     x: [[]],
+            //     y: [[], [], []]
+            // })
         }
 
-        function toggleCollapsible(header) {
-            const content = header.nextElementSibling;
-            const toggleButton = header.querySelector('.collapsible-toggle');
+        // function toggleCollapsible(header) {
+        //     const content = header.nextElementSibling;
+        //     const toggleButton = header.querySelector('.collapsible-toggle');
 
-            if (content.style.display === "block") {
-                content.style.display = "none";
-                toggleButton.textContent = "▼";
-                content.style.animation = "slideUp 0.3s ease-in-out forwards";
-            } else {
-                content.style.display = "block";
-                toggleButton.textContent = "▲";
-                content.style.animation = "slideDown 0.3s ease-in-out forwards";
-            }
-        }
+        //     if (content.style.display === "block") {
+        //         content.style.display = "none";
+        //         toggleButton.textContent = "▼";
+        //         content.style.animation = "slideUp 0.3s ease-in-out forwards";
+        //     } else {
+        //         content.style.display = "block";
+        //         toggleButton.textContent = "▲";
+        //         content.style.animation = "slideDown 0.3s ease-in-out forwards";
+        //     }
+        // }
 
         function generateDefaultRecordingName() {
             const now = new Date();
@@ -887,16 +923,16 @@ body.light-theme .collapsible-toggle:hover {
         const box = document.getElementById('box');
         let currentRotation = {alpha: 0, beta: 0, gamma: 0};
 
-        function updateOrientation(accel, gyro, mag) {
+        function updateOrientation(accel, gyro) {
             const alpha = Math.atan2(accel[1], accel[2]) * 180 / Math.PI;
             const beta = Math.atan2(-accel[0], Math.sqrt(accel[1] * accel[1] + accel[2] * accel[2])) * 180 / Math.PI;
             // const gamma = Math.atan2(gyro[1], gyro[0]) * 180 / Math.PI;
 
             // Calculate yaw (gamma) from the magnetometer data
-            const gamma = Math.atan2(mag[1], mag[0]) * 180 / Math.PI;
+            // const gamma = Math.atan2(mag[1], mag[0]) * 180 / Math.PI;
             currentRotation.alpha = alpha;
             currentRotation.beta = beta;
-            currentRotation.gamma = gamma;
+            currentRotation.gamma = 0;
 
             box.style.transform = `rotateX(${currentRotation.beta}deg) rotateY(${currentRotation.gamma}deg) rotateZ(${currentRotation.alpha}deg)`;
         }
@@ -1039,10 +1075,10 @@ window.addEventListener('beforeunload', function (event) {
             const timerContainer = document.getElementById('timerDisplayContainer');
 
                 const startStopButton = document.getElementById('startStopButton');
-            if(isSerialPortOpen === false) {
-                alert('Please open the serial port first.');
-                return; 
-            }
+         //   if(isSerialPortOpen === false) {
+            //    alert('Please open the serial port first.');
+           ///     return; 
+            ///}
             if (isRecording) {
             // Stop Recording Logic
             console.log("send stop req")
@@ -1324,12 +1360,12 @@ window.addEventListener('beforeunload', function (event) {
                         yaxis: { title: 'Gyroscope' }
                     };
 
-                    const UWBLayout = {
-                        ...darkThemeLayout,
-                        title: 'UWB Data',
-                        xaxis: { title: 'Time (Tio)' },
-                        yaxis: { title: 'UWB' }
-                    };
+                    // const UWBLayout = {
+                    //     ...darkThemeLayout,
+                    //     title: 'UWB Data',
+                    //     xaxis: { title: 'Time (Tio)' },
+                    //     yaxis: { title: 'UWB' }
+                    // };
 
             Plotly.newPlot('accelPlot', [
                 { x: [], y: [], mode: 'lines', name: 'Accel X' },
@@ -1341,11 +1377,11 @@ window.addEventListener('beforeunload', function (event) {
                 { x: [], y: [], mode: 'lines', name: 'Gyro Y' },
                 { x: [], y: [], mode: 'lines', name: 'Gyro Z' }
             ], gyroLayout);
-            Plotly.newPlot('UWBPlot', [
-                { x: [], y: [], mode: 'lines', name: '1th distance' },
-                { x: [], y: [], mode: 'lines', name: '2th distance' },
-                { x: [], y: [], mode: 'lines', name: '3th distance' }
-            ], UWBLayout);
+            // Plotly.newPlot('UWBPlot', [
+            //     { x: [], y: [], mode: 'lines', name: '1th distance' },
+            //     { x: [], y: [], mode: 'lines', name: '2th distance' },
+            //     { x: [], y: [], mode: 'lines', name: '3th distance' }
+            // ], UWBLayout);
 
             const cycleCounterRange = document.getElementById('cycleCounterRange');
             const batchSizeRange = document.getElementById('batchSizeRange');

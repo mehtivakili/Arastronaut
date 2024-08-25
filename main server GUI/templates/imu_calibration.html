@@ -57,7 +57,7 @@
             overflow: hidden;
         }
         .side-container {
-            width: 30%;
+            width: 35%;
             background-color: rgba(30, 30, 30, 0.8); /* More transparent */
             padding: 20px;
             margin-left: 10px;
@@ -558,9 +558,9 @@ body.light-theme .collapsible-toggle:hover {
                     </form>
                 </div> -->
 
-                <h1>ESP32 IMU Data Control</h1>
+                <h1>IMU Data Control</h1>
                 <button onclick="startData()">Start Data Transmission</button>
-                <button onclick="stopData()">Stop Data Transmission</button>
+                <button style="margin-bottom: 5%;" onclick="stopData()">Stop Data Transmission</button>
 
                 <script>
                     function startData() {
@@ -579,9 +579,11 @@ body.light-theme .collapsible-toggle:hover {
                 </script>
                 <!-- <div class="collapsible-section">
                     <div class="collapsible-header" onclick="toggleCollapsible(this)"> -->
-                        <h3>Plot Controller</h3>
                     <!-- </div>
                     <div class="collapsible-content"> -->
+                <div style="display: block;">
+                    <div id="plot_control" style="display: none; padding-top: 10%;">
+                        <h3>Plot Controller</h3>
 
                         <div class="input-group">
                             <label for="cycleCounterRange">Cycle Counter</label>
@@ -595,8 +597,14 @@ body.light-theme .collapsible-toggle:hover {
                             <span id="batchSizeValue">20</span>
                             <small>Set the number of samples in each batch</small>
                         </div>
-                        <div class="input-group">
-                            <label for="sendingRate">Network Sending Rate</label>
+                    </div>
+                        <!-- Checkbox to toggle the display -->
+                    <label>
+                        <input style="align-tracks: center; padding-top: 5%;" type="checkbox" id="toggleCheckbox" onclick="togglePlotControl()">
+                    </label>
+                </div>
+                        <div style="padding-top: 10%; padding-bottom: 10%;" class="input-group">
+                            <label for="sendingRate">Plot Visualization Rate</label>
                             <div id="sendingRate">200 ms</div>
                         </div>
                         <!-- <button class="collapsible-toggle" onclick="toggleCollapsible(this.parentElement)">▲ Collapse</button>
@@ -611,7 +619,7 @@ body.light-theme .collapsible-toggle:hover {
                 </div>
                 <div class="input-row" id="recordParams">
                     <div class="input-group">
-                        <label for="initiationStaticInterval">Init Static T</label>
+                        <label for="initiationStaticInterval">Init Time</label>
                         <input type="number" id="initiationStaticInterval" name="initiationStaticInterval" placeholder="50" value="50" required>
                         <span class="info-icon" title="Recommended: 50 seconds">ℹ️</span>
                     </div>
@@ -625,6 +633,7 @@ body.light-theme .collapsible-toggle:hover {
                         <input type="number" id="T_wait" name="T_wait" placeholder="4" value="4" required>
                         <span class="info-icon" title="Recommended: 1 to 4 seconds">ℹ️</span>
                     </div>
+
                 </div>
                 
                 <div style="display: flex; flex-direction: row; gap: 10px;">
@@ -633,6 +642,12 @@ body.light-theme .collapsible-toggle:hover {
                         <div id="timerDisplay" style="display: none; color: white;"></div>
                     </div>
                 </div>
+                <div>Data Rate is :
+                    <div id="dataRate"></div>
+
+                </div>
+                
+            
                 <p id="flashMessage" class="flash" style="display: none;">Turn the device</p>
                 <p id="latexEquation">Total time = Initiation Static Interval + Turn Counts * T_wait</p>
                 <script>
@@ -644,14 +659,14 @@ body.light-theme .collapsible-toggle:hover {
                         font-size: 12px;
                     }
                 </style>
-                <div class="input-group">
-                    <button id="startStopButton" onclick="toggleRecording()">Start Recording</button>
-                </div>
+
                 <div class="input-row" id="actionButtons" style="display: none;">
                     <button id="backButton" onclick="goBack()">Back</button>
                     <button id="plotButton" onclick="plotThis()">Plot This</button>
                     <button id="calibrateButton" onclick="calibrate()">Calibrate</button>
                 </div>
+                
+                <button id="startStopButton" onclick="toggleRecording()">Start Recording</button>
                 <button type="button" onclick="getCalibratedData()">Get Calibrated Data</button>
                 <h3>Upload Calibration Files</h3>
                 <input type="file" id="accFileInput" accept=".calib">
@@ -775,6 +790,25 @@ body.light-theme .collapsible-toggle:hover {
         //     updateUWBData(data);
 
         // });
+
+                // Function to toggle the display of the plot_control div
+        function togglePlotControl() {
+            var plotControlDiv = document.getElementById("plot_control");
+            var checkbox = document.getElementById("toggleCheckbox");
+
+            if (checkbox.checked) {
+                plotControlDiv.style.display = "block";
+            } else {
+                plotControlDiv.style.display = "none";
+            }
+        }
+
+        socket.on('data_rate', function(data) {
+            const dataRate = data;
+            console.log(data);
+            document.getElementById("dataRate").textContent = dataRate
+        })
+
         socket.on('sensor_data', function(batch) {
             batch.forEach(data => {
                 //  console.log(data)
