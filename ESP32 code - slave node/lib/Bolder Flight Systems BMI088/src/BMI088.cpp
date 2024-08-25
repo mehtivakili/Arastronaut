@@ -1615,6 +1615,9 @@ bool Bmi088::setOdr(Odr odr)
       feature_data = ACC_DATA_SYNC_MODE_400HZ & ACC_DATA_SYNC_MODE_MASK;
       break;
     }
+    // case ODR_200HZ: {
+
+    // }
     default: {
       if (!accel->setOdr(Bmi088Accel::ODR_1600HZ_BW_280HZ)) {
         return false;

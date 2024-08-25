@@ -13,8 +13,10 @@
 
 // Initialize the Task Watchdog Timer
 
-Bmi088Accel accel(SPI, 32);
-Bmi088Gyro gyro(SPI, 25);
+// Bmi088Accel accel(SPI, 32);
+// Bmi088Gyro gyro(SPI, 25);
+Bmi088 bmi(SPI, 32, 25);
+
 
 QMC5883LCompass compass;
 
@@ -162,6 +164,25 @@ void handleModeChange() {
   }
 }
 
+volatile int counter = 0;  // Use volatile to tell the compiler this variable can be changed unexpectedly
+volatile int imuReady = 0;
+
+unsigned long startTime = 0;
+int Count = 0;
+void imuInt(){
+  // if (counter == 0){
+      counter = counter + 1;
+
+  // unsigned long startTime = millis();
+  // }
+  // unsigned long nowTime = millis();
+  // if (nowTime - startTime> 1000){
+  //   Count = counter;
+  //   // counter = 0;
+  // }
+  imuReady = 1;
+}
+
 void safeRangingLoop() {
     unsigned long start = millis();
     while (true) {
@@ -200,9 +221,12 @@ bool sendUdpPacket(std::vector<uint8_t>& data, int maxRetries = 3) {
     return false;
 }
 
+int callCounter = 0; // Counter to track the number of function calls
+std::vector<uint8_t> bufferedImuData; // Buffer to store the first set of data
 
 void sendIMUData() {
-
+      // Increment the function call counter
+    callCounter++;
   int64_t startTime = esp_timer_get_time();  // Start timing in microseconds
 
     // Get the elapsed time in nanoseconds
@@ -235,11 +259,26 @@ void sendIMUData() {
     imuData.insert(imuData.end(), hi.binary, hi.binary + 4);
   }
 
-  // Send the IMU data immediately
-  udp.beginPacket(udpAddress, udpPort);
-  udp.write(imuData.data(), imuData.size());
-  int result = udp.endPacket();
+    // Check if this is the first or second call
+    if (callCounter == 1) {
+        // Store the data in the buffer
+        bufferedImuData = imuData;
+    } else if (callCounter == 2) {
+        // Send the buffered data (from the first call) and the current data (from the second call)
+        udp.beginPacket(udpAddress, udpPort);
 
+        // Send the buffered data first
+        udp.write(bufferedImuData.data(), bufferedImuData.size());
+
+        // Send the current data
+        udp.write(imuData.data(), imuData.size());
+
+        int result = udp.endPacket();
+
+        // Reset the counter and clear the buffer after sending
+        callCounter = 0;
+        bufferedImuData.clear();
+    }
   // sendUdpPacket(imuData, 5);  // Send the IMU data with 3 retries
 
   // Send the data over serial
@@ -402,11 +441,11 @@ void newRange() {
   }
 
   // Send the UWB data immediately
-  // udp.beginPacket(udpAddress, udpPort);
-  // udp.write(uwbData.data(), uwbData.size());
-  // int result = udp.endPacket();
+  udp.beginPacket(udpAddress, udpPort);
+  udp.write(uwbData.data(), uwbData.size());
+  int result = udp.endPacket();
 
-  sendUdpPacket(uwbData, 10);
+  // sendUdpPacket(uwbData, 10);
 
   int64_t endTime = esp_timer_get_time();  // End timing
   // Serial.print("DW1000Ranging.loop execution time: ");
@@ -424,12 +463,68 @@ void newRange() {
 
 void setup() {
   Serial.begin(115200);
+  int status;
+  // if (accel.begin(Bmi088Accel::RANGE_12G, Bmi088Accel::ODR_200HZ_BW_80HZ) < 0 ||
+  //     gyro.begin(Bmi088Gyro::RANGE_1000DPS, Bmi088Gyro::ODR_200HZ_BW_64HZ) < 0) {
+  //   // Serial.println("Sensor initialization failed");
+  //   while (1);
+  // }
 
-  if (accel.begin(Bmi088Accel::RANGE_12G, Bmi088Accel::ODR_200HZ_BW_80HZ) < 0 ||
-      gyro.begin(Bmi088Gyro::RANGE_1000DPS, Bmi088Gyro::ODR_200HZ_BW_64HZ) < 0) {
-    // Serial.println("Sensor initialization failed");
-    while (1);
+    /* Start the sensors */
+  status = bmi.begin(Bmi088::ACCEL_RANGE_6G, Bmi088::GYRO_RANGE_1000DPS, Bmi088::ODR_1000HZ);
+  if (status < 0) {
+    Serial.println("IMU Initialization Error");
+    Serial.println(status);
+    while (1) {}
   }
+  
+  /* Set the ranges */
+  status = bmi.setRange(Bmi088::ACCEL_RANGE_6G, Bmi088::GYRO_RANGE_1000DPS);
+  if (status < 0) {
+    Serial.println("Failed to set ranges");
+    Serial.println(status);
+    while (1) {}
+  }
+  
+  /* Set the output data rate */
+  status = bmi.setOdr(Bmi088::ODR_400HZ);
+  if (status < 0) {
+    Serial.println("Failed to set ODR");
+    Serial.println(status);
+    while (1) {}
+  }
+
+  /* Map pin 26 for accelerometer data ready interrupt */
+  status = bmi.mapDrdy(Bmi088::PIN_2); // Assuming PIN_2 is mapped to pin 26
+  if (status < 0) {
+    Serial.println("Failed to map accelerometer data ready pin");
+    Serial.println(status);
+    while (1) {}
+  }
+  
+  /* Map pin 33 for gyroscope sync interrupt */
+  status = bmi.mapSync(Bmi088::PIN_4); // Assuming PIN_4 is mapped to pin 33
+  if (status < 0) {
+    Serial.println("Failed to map gyroscope sync pin");
+    Serial.println(status);
+    while (1) {}
+  }
+  
+  /* Set the data ready pin to push-pull and active high */
+  status = bmi.pinModeDrdy(Bmi088::PUSH_PULL, Bmi088::ACTIVE_HIGH);
+  if (status < 0) {
+    Serial.println("Failed to set up data ready pin");
+    Serial.println(status);
+    while (1) {}
+  }
+
+  /* Attach the corresponding uC pins to interrupts */
+  pinMode(26, INPUT);
+  attachInterrupt(26, imuInt, RISING);
+
+//   pinMode(33, INPUT);
+//   attachInterrupt(33, drdy, RISING); // Assuming you're using the same handler for both
+
 
   // Set up access point (AP) mode
   WiFi.softAP(ap_ssid, ap_password);
@@ -475,6 +570,9 @@ void logMemory() {
 
 
 void loop() {
+
+    // DW1000Ranging.loop();
+
     static unsigned long lastIMUSendTime = 0;
     static unsigned long lastRangeTime = 0;
     static unsigned long lastMAGSendTime = 0;
@@ -486,23 +584,48 @@ void loop() {
     const unsigned long MAG_RATE = 5000;     // 5 ms interval for Magnetometer data
     const unsigned long IMUMAG_RATE = 5000;  // 5 ms interval for combined IMU and Magnetometer data
 
-    unsigned long currentTime = micros();  // Use micros() for higher resolution
+    // unsigned long currentTime = micros();  // Use micros() for higher resolution
 
-    if (sendData && currentTime - last >= 3000000) {  // Handle web requests every 3000 ms (3 seconds)
-        server.handleClient();
-        last = currentTime;
+    // if (sendData && currentTime - last >= 3000000) {  // Handle web requests every 3000 ms (3 seconds)
+    //     server.handleClient();
+    //     last = currentTime;
+    // }
+
+    static unsigned long lastCheckTime = 0;
+    static int lastCounter = 0;
+
+    unsigned long currentTime = millis();
+
+    // Check if 1 second has passed
+    if (currentTime - lastCheckTime >= 1000) {
+        // Disable interrupts while reading shared variable
+        noInterrupts();
+        int countInLastSecond = counter;
+        counter = 0;  // Reset the counter
+        interrupts();
+
+        Serial.print("Interrupts in last second: ");
+        Serial.println(countInLastSecond);
+
+        lastCheckTime = currentTime;
     }
 
-    switch (currentMode) {
+    switch (56) {
         case IMU_ONLY:
-            if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // 5 ms interval for IMU data
-                accel.readSensor();
-                gyro.readSensor();
-                accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-                gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
-                sendIMUData();
-                lastIMUSendTime = currentTime;
-            }
+            // if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // 5 ms interval for IMU data
+              if (imuReady == 1){
+                      Serial.println(counter);
+
+                  // Serial.println(Count);
+                // bmi.readSensor();
+                // bmi.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw, &gyroX_raw, &gyroY_raw, &gyroZ_raw);
+
+                // sendIMUData();
+                imuReady = 0;
+              }
+
+                // lastIMUSendTime = currentTime;
+            // }
             break;
 
         case UWB_CALIBRATION:
@@ -521,10 +644,10 @@ void loop() {
 
         case IMU_UWB_DATA:
             if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // 5 ms interval for IMU data
-                accel.readSensor();
-                gyro.readSensor();
-                accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-                gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                // accel.readSensor();
+                // gyro.readSensor();
+                // accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+                // gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
                 sendIMUData();
                 lastIMUSendTime = currentTime;
             }
@@ -543,10 +666,10 @@ void loop() {
 
         case IMU_COMPASS:
             if (sendData && currentTime - lastIMUMAGSendTime >= IMUMAG_RATE) {  // 5 ms interval for IMU and Magnetometer data
-                accel.readSensor();
-                gyro.readSensor();
-                accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-                gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                // accel.readSensor();
+                // gyro.readSensor();
+                // accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+                // gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
                 sendIMU_MAG();
                 lastIMUMAGSendTime = currentTime;
             }
@@ -555,10 +678,10 @@ void loop() {
         case IMU_UWB_COMPASS:
             if (sendData && currentTime - lastIMUMAGSendTime >= IMUMAG_RATE) {  // 5 ms interval for IMU and Magnetometer data
                 compass.read();
-                accel.readSensor();
-                gyro.readSensor();
-                accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-                gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                // accel.readSensor();
+                // gyro.readSensor();
+                // accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+                // gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
                 sendIMU_MAG();
                 lastIMUMAGSendTime = currentTime;
             }
