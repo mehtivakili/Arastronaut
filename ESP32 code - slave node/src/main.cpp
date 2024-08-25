@@ -202,11 +202,18 @@ bool sendUdpPacket(std::vector<uint8_t>& data, int maxRetries = 3) {
 
 
 void sendIMUData() {
-  int64_t startTime = esp_timer_get_time();  // Start timing
 
-  float tio_millis = static_cast<float>(millis());
-  Tio = tio_millis / 1000.0;
-  myArray[0] = Tio;
+  int64_t startTime = esp_timer_get_time();  // Start timing in microseconds
+
+    // Get the elapsed time in nanoseconds
+    int64_t elapsedTimeNs = esp_timer_get_time() * 1000;  // Convert microseconds to nanoseconds
+
+  // int64_t startTime = esp_timer_get_time();  // Start timing
+
+  // float tio_millis = static_cast<float>(millis());
+  // Tio = tio_millis / 1000.0;
+  // myArray[0] = Tio;
+
   myArray[1] = accelX_raw;
   myArray[2] = accelY_raw;
   myArray[3] = accelZ_raw;
@@ -219,24 +226,31 @@ void sendIMUData() {
   // Add the IMU separator
   imuData.insert(imuData.end(), IMU_SEPARATOR, IMU_SEPARATOR + strlen(IMU_SEPARATOR));
 
-  for (int i = 0; i < 7; i++) {
+    // Add the 64-bit timestamp to the data buffer
+    imuData.insert(imuData.end(), reinterpret_cast<uint8_t*>(&elapsedTimeNs), reinterpret_cast<uint8_t*>(&elapsedTimeNs) + sizeof(int64_t));
+
+  for (int i = 1; i < 7; i++) {
     binaryFloat hi;
     hi.floatingPoint = myArray[i];
     imuData.insert(imuData.end(), hi.binary, hi.binary + 4);
   }
 
   // Send the IMU data immediately
-  // udp.beginPacket(udpAddress, udpPort);
-  // udp.write(imuData.data(), imuData.size());
-  // int result = udp.endPacket();
+  udp.beginPacket(udpAddress, udpPort);
+  udp.write(imuData.data(), imuData.size());
+  int result = udp.endPacket();
 
   // sendUdpPacket(imuData, 5);  // Send the IMU data with 3 retries
 
   // Send the data over serial
-  Serial.write(imuData.data(), imuData.size());
+  // Serial.write(imuData.data(), imuData.size());
 
+
+  // int64_t endTime = esp_timer_get_time();  // End timing
 
   int64_t endTime = esp_timer_get_time();  // End timing
+
+
   // Serial.print("sendIMUData execution time: ");
   // Serial.print((endTime - startTime) / 1000.0);  // Convert microseconds to milliseconds
   // Serial.println(" ms");
@@ -461,106 +475,100 @@ void logMemory() {
 
 
 void loop() {
-  // server.handleClient();
+    static unsigned long lastIMUSendTime = 0;
+    static unsigned long lastRangeTime = 0;
+    static unsigned long lastMAGSendTime = 0;
+    static unsigned long lastIMUMAGSendTime = 0;
+    static unsigned long last = 0;
 
-    // esp_task_wdt_reset();  // Reset watchdog timer
+    const unsigned long UWB_RATE = 15000;    // 15 ms interval for UWB data
+    const unsigned long IMU_RATE = 5000;     // 5 ms interval for IMU data
+    const unsigned long MAG_RATE = 5000;     // 5 ms interval for Magnetometer data
+    const unsigned long IMUMAG_RATE = 5000;  // 5 ms interval for combined IMU and Magnetometer data
 
-  static unsigned long lastIMUSendTime = 0;
-  static unsigned long lastRangeTime = 0;
-  static unsigned long lastMAGSendTime = 0;
-  static unsigned long lastIMUMAGSendTime = 0;
-  static unsigned long last = 0;
+    unsigned long currentTime = micros();  // Use micros() for higher resolution
 
+    if (sendData && currentTime - last >= 3000000) {  // Handle web requests every 3000 ms (3 seconds)
+        server.handleClient();
+        last = currentTime;
+    }
 
-  const int UWB_RATE = 15;    // at lower rate that 15Hz the output data will corrupt
-  const int IMU_RATE = 5;
-  const int MAG_RATE = 5;
-  const int IMUMAG_RATE = 5;
+    switch (currentMode) {
+        case IMU_ONLY:
+            if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // 5 ms interval for IMU data
+                accel.readSensor();
+                gyro.readSensor();
+                accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+                gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                sendIMUData();
+                lastIMUSendTime = currentTime;
+            }
+            break;
 
+        case UWB_CALIBRATION:
+            if (calibration_in_progress && currentTime - lastRangeTime >= UWB_RATE) {  // 15 ms interval for UWB data
+                DW1000Ranging.loop();
+                lastRangeTime = currentTime;
+            }
+            break;
 
-  unsigned long currentTime = millis();
+        case UWB_DATA:
+            if (currentTime - lastRangeTime >= UWB_RATE) {  // 15 ms interval for UWB data
+                DW1000Ranging.loop();
+                lastRangeTime = currentTime;
+            }
+            break;
 
-    if (sendData && currentTime - last >= 3000) {  // 10ms interval for web
-      server.handleClient();
-      last = currentTime;}
+        case IMU_UWB_DATA:
+            if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // 5 ms interval for IMU data
+                accel.readSensor();
+                gyro.readSensor();
+                accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+                gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                sendIMUData();
+                lastIMUSendTime = currentTime;
+            }
+            if (currentTime - lastRangeTime >= UWB_RATE) {  // 15 ms interval for UWB data
+                safeRangingLoop();
+                lastRangeTime = currentTime;
+            }
+            break;
 
-  switch (currentMode) {
-    case IMU_ONLY:
-      if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // 10ms interval for IMU data
-        accel.readSensor();
-        gyro.readSensor();
-        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
-        sendIMUData();
-        lastIMUSendTime = currentTime;
-      }
-      break;
+        case COMPASS:
+            if (sendData && currentTime - lastMAGSendTime >= MAG_RATE) {  // 5 ms interval for Magnetometer data
+                sendCompass();
+                lastMAGSendTime = currentTime;
+            }
+            break;
 
-    case UWB_CALIBRATION:
-      if (calibration_in_progress && currentTime - lastRangeTime >= UWB_RATE) {  // 50ms interval for UWB data
-        DW1000Ranging.loop();
-        lastRangeTime = currentTime;
-      }
-      break;
+        case IMU_COMPASS:
+            if (sendData && currentTime - lastIMUMAGSendTime >= IMUMAG_RATE) {  // 5 ms interval for IMU and Magnetometer data
+                accel.readSensor();
+                gyro.readSensor();
+                accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+                gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                sendIMU_MAG();
+                lastIMUMAGSendTime = currentTime;
+            }
+            break;
 
-    case UWB_DATA:
-      if (currentTime - lastRangeTime >= UWB_RATE) {
-        DW1000Ranging.loop();
-        lastRangeTime = currentTime;
-      }
-      break;
+        case IMU_UWB_COMPASS:
+            if (sendData && currentTime - lastIMUMAGSendTime >= IMUMAG_RATE) {  // 5 ms interval for IMU and Magnetometer data
+                compass.read();
+                accel.readSensor();
+                gyro.readSensor();
+                accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
+                gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
+                sendIMU_MAG();
+                lastIMUMAGSendTime = currentTime;
+            }
+            if (currentTime - lastRangeTime >= UWB_RATE) {  // 15 ms interval for UWB data
+                safeRangingLoop();
+                lastRangeTime = currentTime;
+            }
+            break;
 
-    case IMU_UWB_DATA:
-      if (sendData && currentTime - lastIMUSendTime >= IMU_RATE) {  // IMU data every 10ms
-        accel.readSensor();
-        gyro.readSensor();
-        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
-        sendIMUData();
-        lastIMUSendTime = currentTime;
-      } 
-      if (currentTime - lastRangeTime >= UWB_RATE) {  // UWB data every 50ms
-        safeRangingLoop();  // Call the safe loop function
-        lastRangeTime = currentTime;
-      }
-      break;
-
-    case COMPASS:
-      if (sendData && currentTime - lastMAGSendTime >= MAG_RATE) {  // IMU data every 10ms
-        sendCompass();
-        lastMAGSendTime = currentTime;
-      }
-      break;
-
-    case IMU_COMPASS:
-      if (sendData && currentTime - lastIMUMAGSendTime >= IMUMAG_RATE) {  // IMU data every 10ms
-
-        accel.readSensor();
-        gyro.readSensor();
-        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
-        sendIMU_MAG();
-        lastIMUMAGSendTime = currentTime;
-      }
-      break;
-
-    case IMU_UWB_COMPASS:
-      if (sendData && currentTime - lastIMUMAGSendTime >= 10) {  // IMU data every 10ms
-        compass.read();
-        accel.readSensor();
-        gyro.readSensor();
-        accel.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw);
-        gyro.getSensorRawValues(&gyroX_raw, &gyroY_raw, &gyroZ_raw);
-        sendIMU_MAG();
-        lastIMUMAGSendTime = currentTime;
-      }
-      if (currentTime - lastRangeTime >= 15) { 
-        safeRangingLoop();  // Call the safe loop function
-        lastRangeTime = currentTime;
-      }        
-      break;
-
-    default:
-      break;
-  }
+        default:
+            break;
+    }
 }
