@@ -12,7 +12,7 @@ sock.bind((UDP_IP, UDP_PORT))
 print(f"Listening for UDP packets on port {UDP_PORT}...")
 
 def receive_udp_data():
-    check = "abc/"
+    check = "img/"
     check_encoded = check.encode()
 
     while True:
@@ -21,13 +21,14 @@ def receive_udp_data():
 
         parts = data.split(check_encoded)
         for part in parts:
-            if len(part) == 28:  # Check if the packet size is correct (7 floats * 4 bytes each)
-                values = struct.unpack('<7f', part)
-                Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = values
-                print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
+            if len(part) == 44:  # Check if the packet size is correct (7 floats * 4 bytes each)
+                values = struct.unpack('<q9f', part)
+                Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, mx,my,mz = values
+                print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f}), Mag:({mx}, {my}, {mz})")
             else:
                 if part:
                     print(f"Received packet of incorrect size: {len(part)} bytes")
+                    
 
 if __name__ == "__main__":
     receive_udp_data()

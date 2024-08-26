@@ -540,7 +540,7 @@ body.light-theme .collapsible-toggle:hover {
         </script>
         
         <div class="top-container">
-            <button class="back-button" onclick="window.location.href='/calibration'">Back to Home</button>
+            <button class="back-button" onclick="window.location.href='/'">Back to Home</button>
             <h1>Data Acquisition</h1>
         </div>
         <div class="main-container">
@@ -813,8 +813,8 @@ body.light-theme .collapsible-toggle:hover {
             batch.forEach(data => {
                 //  console.log(data)
             
-            const { Tio, accel, gyro } = data;
-            updateOrientation(accel, gyro);
+            const { Tio, accel, gyro, mag } = data;
+            updateOrientation(accel, gyro, mag);
             // contor += 1;
             // console.log('Received data:', Tio, accel, gyro); // Debug statement
             // console.log(contor)
@@ -923,16 +923,16 @@ body.light-theme .collapsible-toggle:hover {
         const box = document.getElementById('box');
         let currentRotation = {alpha: 0, beta: 0, gamma: 0};
 
-        function updateOrientation(accel, gyro) {
+        function updateOrientation(accel, gyro, mag) {
             const alpha = Math.atan2(accel[1], accel[2]) * 180 / Math.PI;
             const beta = Math.atan2(-accel[0], Math.sqrt(accel[1] * accel[1] + accel[2] * accel[2])) * 180 / Math.PI;
             // const gamma = Math.atan2(gyro[1], gyro[0]) * 180 / Math.PI;
 
             // Calculate yaw (gamma) from the magnetometer data
-            // const gamma = Math.atan2(mag[1], mag[0]) * 180 / Math.PI;
+            const gamma = Math.atan2(mag[1], mag[0]) * 180 / Math.PI;
             currentRotation.alpha = alpha;
             currentRotation.beta = beta;
-            currentRotation.gamma = 0;
+            currentRotation.gamma = gamma;
 
             box.style.transform = `rotateX(${currentRotation.beta}deg) rotateY(${currentRotation.gamma}deg) rotateZ(${currentRotation.alpha}deg)`;
         }

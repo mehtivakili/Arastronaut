@@ -1,4 +1,5 @@
-from flask import Flask, request, render_template, jsonify, send_from_directory, send_file
+from flask import Flask, request, render_template, jsonify, send_from_directory, send_file, redirect, url_for
+
 from flask_cors import CORS
 import os
 import esptool
@@ -14,6 +15,8 @@ import time
 import zlib
 import csv
 import queue
+import requests
+
 from flask_socketio import SocketIO
 # import eventlet
 import socketio
@@ -135,6 +138,10 @@ state = "imu"
 global MODE
 MODE = "imu_tk"
 
+byteData = 32
+check = "abc/"
+
+
 FIRMWARE_BASE_PATH = 'firmwares'
 serial_port = None
 serial_thread = None
@@ -187,6 +194,16 @@ def index():
     stop_udp_thread(udp_thread3_stop_event, udp_thread3)
     stop_udp_thread(udp_thread4_stop_event, udp_thread4)
 
+                        # Send the GET request within the POST request handler
+    try:
+        response = requests.get('http://192.168.4.1/mode?mode=99')
+        if response.status_code == 200:
+            print("GET request successful")
+        else:
+            print(f"GET request failed with status code: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error during GET request: {e}")
+
     network_info = get_network_info()
     return render_template('index.html', network_info=network_info)
 
@@ -237,11 +254,24 @@ def firmware():
     
 @app.route('/data_acquisition', methods=['GET', 'POST'])
 def data_acquisition():
-    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3, MODE
+    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3, MODE, byteData, check
     stop_udp_thread(udp_thread3_stop_event, udp_thread3)  # Ensure the previous thread is stopped
 
     if request.method == 'POST':
+
+                # Send the GET request within the POST request handler
+        try:
+            response = requests.get('http://192.168.4.1/mode?mode=6')
+            if response.status_code == 200:
+                print("GET request successful")
+            else:
+                print(f"GET request failed with status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error during GET request: {e}")
+
         MODE = "ros"
+        check = "img/"
+        byteData = 44
         udp_thread3 = start_udp_thread(read_serial_data, udp_thread3_stop_event)
         print("UDP thread started")
 
@@ -262,7 +292,15 @@ def calibration():
     stop_udp_thread(udp_thread2_stop_event, udp_thread2)
     stop_udp_thread(udp_thread3_stop_event, udp_thread3)
     stop_udp_thread(udp_thread4_stop_event, udp_thread4)
-
+                        # Send the GET request within the POST request handler
+    try:
+        response = requests.get('http://192.168.4.1/mode?mode=99')
+        if response.status_code == 200:
+            print("GET request successful")
+        else:
+            print(f"GET request failed with status code: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error during GET request: {e}")
 
     # if request.method == 'GET':
     network_info = get_network_info()
@@ -291,11 +329,20 @@ def calibration():
 
 @app.route('/uwb_calibration', methods=['GET', 'POST'])
 def uwb_udp():
-    global udp_thread_running, udp_thread2, state, udp_thread, udp_thread3
+    global udp_thread_running, udp_thread2, state, udp_thread, udp_thread3, check
     stop_udp_thread(udp_thread3_stop_event, udp_thread3)  # Ensure the previous thread is stopped
 
     if request.method == 'POST':
         # Start the UDP thread
+                # Send the GET request within the POST request handler
+        try:
+            response = requests.get('http://192.168.4.1/mode?mode=2')
+            if response.status_code == 200:
+                print("GET request successful")
+            else:
+                print(f"GET request failed with status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error during GET request: {e}")
             
 
         udp_thread3 = start_udp_thread(uwb_udp_listener, udp_thread3_stop_event)
@@ -354,10 +401,37 @@ def uwb_udp2():
 
 
 
+
 @app.route('/magnometer_calibration')
 def magnometer_calibration():
-    network_info = get_network_info()
-    return render_template('magnometer_calibration.html', network_info=network_info)
+    # Send the GET request to set the mode
+    try:
+        response = requests.get('http://192.168.4.1/mode?mode=5')
+        if response.status_code == 200:
+            print("GET request successful")
+        else:
+            print(f"GET request failed with status code: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error during GET request: {e}")
+
+    # Absolute path to the mag_calib_online.py script
+    script_path = r'E:\aras\arastronaut\arastronaut\Arastronaut\mag_calib_online.py'
+
+    # Run the mag_calib_online.py script and log its output
+    try:
+        print("Running the mag_calib_online.py script...")
+        result = subprocess.run(['python', script_path], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("Script executed successfully")
+            print(result.stdout)  # Log or process the output if needed
+        else:
+            print(f"Script failed with return code: {result.returncode}")
+            print(result.stderr)  # Log the error if execution failed
+    except Exception as e:
+        print(f"Error running the script: {e}")
+
+    # Redirect to the calibration route after the script execution
+    return redirect(url_for('calibration'))
 
 # @app.route('/uwb_calibration')
 # def uwb_calibration():
@@ -384,11 +458,23 @@ def update_batch_size():
 
 @app.route('/device_orientation', methods=['POST'])
 def device_orientation():
-    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3
+    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3,byteData, check
     stop_udp_thread(udp_thread3_stop_event, udp_thread3)  # Ensure the previous thread is stopped
 
     if request.method == 'POST':
 
+                        # Send the GET request within the POST request handler
+        try:
+            response = requests.get('http://192.168.4.1/mode?mode=5')
+            if response.status_code == 200:
+                print("GET request successful")
+            else:
+                print(f"GET request failed with status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error during GET request: {e}")
+
+        byteData = 44
+        check = "img/"
         udp_thread3 = start_udp_thread(read_serial_data, udp_thread3_stop_event)
         print("UDP thread started")
     network_info = get_network_info
@@ -428,10 +514,23 @@ def python_serial():
 #             return render_template('python_UDP.html', network_info=network_info)
 @app.route('/imu_calibration', methods=['GET', 'POST'])
 def imu_calib():
-    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3, MODE
+    global udp_thread_running, udp_thread, state, udp_thread2, udp_thread3, MODE, byteData, check
     if request.method == 'POST':
         stop_udp_thread(udp_thread2_stop_event, udp_thread2)  # Ensure the previous thread is stopped
+
+                # Send the GET request within the POST request handler
+        try:
+            response = requests.get('http://192.168.4.1/mode?mode=0')
+            if response.status_code == 200:
+                print("GET request successful")
+            else:
+                print(f"GET request failed with status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error during GET request: {e}")
+
         MODE = "imu_tk"
+        byteData = 32
+        check = "abc/"
         udp_thread2 = start_udp_thread(read_serial_data, udp_thread2_stop_event)
         print("IMU calib thread started")
 
@@ -943,6 +1042,7 @@ def read_serial_data(stop_event):
     global cycle_counter_limit
     global udp_thread_running
     global state
+    global check
     # global sock
     numbers = []
     # offset = 0  # Set this to your required offset
@@ -978,7 +1078,6 @@ def read_serial_data(stop_event):
     # most_recent_gyro_file = "test_imu_gyro.calib"
     # batch_size = 10
     batch_data = []
-    check = "abc/"
     check_encoded = check.encode()
     check_length = len(check_encoded)
 
@@ -1014,7 +1113,9 @@ def read_serial_data(stop_event):
     # print("why the ..")
     print("MODE is ")
     print(MODE)
-    time.sleep(5)
+    print("check is :" + str(check))
+    print("byteData is: " + str(byteData))
+    # time.sleep(5)
     while not stop_event.is_set():
         # if(state == "imu"):
         # if(True):
@@ -1136,7 +1237,7 @@ def read_serial_data(stop_event):
                 if Timer != 0:
                     if start_time != 0:                    
                         current_time_ns = time.time_ns()
-                        print("uwb time start: " + str(current_time_ns))
+                        # print("uwb time start: " + str(current_time_ns))
                         final_time = (Tio * 1000000000) + current_time_ns
                         end_time = time.time()
                         if (end_time - start_time < Timer):
@@ -1171,22 +1272,28 @@ def read_serial_data(stop_event):
 
 
 
-
-            while len(buffer) >= 36:  # 4 bytes for the "abc/" and 28 bytes for the packet
+            # print("byteData is " + str(byteData))
+            lentgh = byteData + 4
+            while len(buffer) >= lentgh:  # 4 bytes for the "abc/" and 28 bytes for the packet
+                # print(lentgh)
                 start_index = buffer.find(check_encoded)
                 if start_index == -1:
                     break  # "abc/" not found, wait for more data
 
 
-                end_index = start_index + len(check_encoded) + 32
+                end_index = start_index + len(check_encoded) + byteData
                 if end_index > len(buffer):
                     break  # Not enough data for a full packet, wait for more data
 
                 part = buffer[start_index + len(check_encoded):end_index]
                 buffer = buffer[end_index:]  # Remove the processed part from the buffer
 
-                if len(part) == 32:   # 28 bytes for the packet (Tio accx accy accz gyrox gyroy gyroz) 4*7 + (magx magy magz) 4*3 = 40
-                    numbers = struct.unpack('<q6f', part)
+                if len(part) == byteData:   # 32 bytes for the packet (Tio*2 accx accy accz gyrox gyroy gyroz) 4*7 + (magx magy magz) 4*3 = 44
+                    if(byteData == 32):
+                        numbers = struct.unpack('<q6f', part)
+                    elif(byteData == 44):
+                        numbers = struct.unpack('<q9f', part)
+
                     # Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = numbers
                     # print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")
                     
@@ -1204,7 +1311,9 @@ def read_serial_data(stop_event):
                     accel = numbers[1:4]
                     gyro = numbers[4:7]
                     # print(Tio)
-                    # mag = numbers[7:10]
+                    if(byteData == 44):
+                        mag = numbers[7:9]
+                        print(mag)
                     final_time2 = (Tio *  1000000000) + current_time_ns2
 
                     # print (f"Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
@@ -1266,10 +1375,15 @@ def read_serial_data(stop_event):
                     # Emit data every 20 cycles
                     if cycle_counter >= cycle_counter_limit:
                         # Append data to batch
-                        batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                        if (byteData == 32):
+                            batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro})
+                        elif(byteData == 44):
+                            batch_data.append({'Tio': Tio, 'accel': accel, 'gyro': gyro, 'mag': mag})
                         if len(batch_data) >= batch_size:
                             # Emit the batch of data
                             sio_client.emit('sensor_data', batch_data)
+                            # print(batch_data)
+
 
                             # Reset the batch data
                             batch_data = []
