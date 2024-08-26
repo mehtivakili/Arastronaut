@@ -1069,6 +1069,7 @@ def read_serial_data(stop_event):
     imu_ros_filename = f"imu_ros-{timestamp}.csv"
     global createdFlag
     createdFlag = True
+    formatted_uwb = 0
 
     # Update the most recent filenames
     most_recent_acc_file = acc_filename
@@ -1243,6 +1244,7 @@ def read_serial_data(stop_event):
                         if (end_time - start_time < Timer):
                             if address == 130:
                                 formatted_uwb = [f"{Tio}", f"{address}", f"{dist10}"]
+                                print(formatted_uwb)
                             elif address == 131:
                                 formatted_uwb = [f"{Tio}", f"{address}", f"{dist20}"]
                             elif address == 133:

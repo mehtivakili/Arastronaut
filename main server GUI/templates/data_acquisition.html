@@ -729,67 +729,67 @@ body.light-theme .collapsible-toggle:hover {
         let TioData = [];
         let accelX = [], accelY = [], accelZ = [];
         let gyroX = [], gyroY = [], gyroZ = [];
-        // let UWB_Time = [];
-        // let UWB_d1 = []; UWB_d2 = []; UWB_d3 = [];
+        let UWB_Time = [];
+        let UWB_d1 = []; UWB_d2 = []; UWB_d3 = [];
 
         // socket.on('sensor_data', function(data){
         //     console.log('aaa',data)
         // })
-        // contor = 0
-        // function updateUWBData(data) {
-        //     const logElement = document.getElementById('log');
-        //     // console.log(data.address)
-        //     // console.log(`Tio : ${data.Tio}`)
+        contor = 0
+        function updateUWBData(data) {
+            const logElement = document.getElementById('log');
+            // console.log(data.address)
+            // console.log(`Tio : ${data.Tio}`)
 
-        //     // Assuming data is an array of objects with address and distance properties
-        //     //data.sort((a, b) => a.address - b.address); // Sort data by address
-        //     // logElement.innerHTML = ''; // Clear existing log
+            // Assuming data is an array of objects with address and distance properties
+            data.sort((a, b) => a.address - b.address); // Sort data by address
+            logElement.innerHTML = ''; // Clear existing log
 
-        //     // data.forEach(item => {
+            data.forEach(item => {
 
 
-        //         const logEntry = document.createElement('div');
-        //         logEntry.textContent = `Address: ${data.address}, Distance: ${data.distance}`;
-        //         logElement.appendChild(logEntry);
-        //         UWB_Time.push(data.Tio2);
-        //         if(data.address == 130){
-        //             UWB_d1.push(data.distance)
-        //         } else if (data.address == 131){
-        //             UWB_d2.push(data.distance)
-        //         } else if (data.address == 133){
-        //             UWB_d3.push(data.distance)
-        //         }
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `Address: ${data.address}, Distance: ${data.distance}`;
+                logElement.appendChild(logEntry);
+                UWB_Time.push(data.Tio2);
+                if(data.address == 130){
+                    UWB_d1.push(data.distance)
+                } else if (data.address == 131){
+                    UWB_d2.push(data.distance)
+                } else if (data.address == 133){
+                    UWB_d3.push(data.distance)
+                }
 
-        //         console.log(UWB_d1)
+                console.log(UWB_d1)
                 
 
-        //         Plotly.update('UWBPlot', {
-        //         // x: [UWB_Time],
-        //         // y: [UWB_d1, UWB_d2, UWB_d3]
-        //         x: [UWB_Time],
-        //         y: [2, 3, 4]
-        //     })
+                Plotly.update('UWBPlot', {
+                // x: [UWB_Time],
+                // y: [UWB_d1, UWB_d2, UWB_d3]
+                x: [UWB_Time],
+                y: [2, 3, 4]
+            })
 
 
-        //         if (TioData.length > 500) {
-        //         UWB_Time.shift();
-        //         UWB_d1.shift();
-        //         UWB_d2.shift();
-        //         UWB_d3.shift();
-        //     }
-        //     // }
-        // // );
-        // }
-        // socket.on('UWB_data', function(data) {
-        //     // console.log(data);
-        //     // updateUWBData(data);
-        //     const {Tio2, address, distance} = data;
+                if (TioData.length > 500) {
+                UWB_Time.shift();
+                UWB_d1.shift();
+                UWB_d2.shift();
+                UWB_d3.shift();
+            }
+            }
+        );
+        }
+        socket.on('UWB_data', function(data) {
+            console.log(data);
+            // updateUWBData(data);
+            const {Tio2, address, distance} = data;
 
             
 
-        //     updateUWBData(data);
+            // updateUWBData(data);
 
-        // });
+        });
 
                 // Function to toggle the display of the plot_control div
         function togglePlotControl() {
@@ -862,9 +862,9 @@ body.light-theme .collapsible-toggle:hover {
             gyroX = [];
             gyroY = [];
             gyroZ = [];
-            // UWB_d1 = [];
-            // UWB_d2 = [];
-            // UWB_d3 = [];
+            UWB_d1 = [];
+            UWB_d2 = [];
+            UWB_d3 = [];
 
             Plotly.update('accelPlot', {
                 x: [[]],
@@ -875,10 +875,10 @@ body.light-theme .collapsible-toggle:hover {
                 x: [[]],
                 y: [[], [], []]
             });
-            // Plotly.update('UWBPlot', {
-            //     x: [[]],
-            //     y: [[], [], []]
-            // })
+            Plotly.update('UWBPlot', {
+                x: [[]],
+                y: [[], [], []]
+            })
         }
 
         // function toggleCollapsible(header) {
@@ -1360,12 +1360,12 @@ window.addEventListener('beforeunload', function (event) {
                         yaxis: { title: 'Gyroscope' }
                     };
 
-                    // const UWBLayout = {
-                    //     ...darkThemeLayout,
-                    //     title: 'UWB Data',
-                    //     xaxis: { title: 'Time (Tio)' },
-                    //     yaxis: { title: 'UWB' }
-                    // };
+                    const UWBLayout = {
+                        ...darkThemeLayout,
+                        title: 'UWB Data',
+                        xaxis: { title: 'Time (Tio)' },
+                        yaxis: { title: 'UWB' }
+                    };
 
             Plotly.newPlot('accelPlot', [
                 { x: [], y: [], mode: 'lines', name: 'Accel X' },
@@ -1377,11 +1377,11 @@ window.addEventListener('beforeunload', function (event) {
                 { x: [], y: [], mode: 'lines', name: 'Gyro Y' },
                 { x: [], y: [], mode: 'lines', name: 'Gyro Z' }
             ], gyroLayout);
-            // Plotly.newPlot('UWBPlot', [
-            //     { x: [], y: [], mode: 'lines', name: '1th distance' },
-            //     { x: [], y: [], mode: 'lines', name: '2th distance' },
-            //     { x: [], y: [], mode: 'lines', name: '3th distance' }
-            // ], UWBLayout);
+            Plotly.newPlot('UWBPlot', [
+                { x: [], y: [], mode: 'lines', name: '1th distance' },
+                { x: [], y: [], mode: 'lines', name: '2th distance' },
+                { x: [], y: [], mode: 'lines', name: '3th distance' }
+            ], UWBLayout);
 
             const cycleCounterRange = document.getElementById('cycleCounterRange');
             const batchSizeRange = document.getElementById('batchSizeRange');
