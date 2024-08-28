@@ -352,7 +352,8 @@ class Bmi088 {
     enum Odr {
       ODR_2000HZ,
       ODR_1000HZ,
-      ODR_400HZ
+      ODR_400HZ,
+      ODR_200HZ
     };
     enum DrdyPin {
       PIN_1,
@@ -401,6 +402,7 @@ class Bmi088 {
     static const uint16_t ACC_DATA_SYNC_MODE_400HZ = 0x01;
     static const uint16_t ACC_DATA_SYNC_MODE_1000HZ = 0x02;
     static const uint16_t ACC_DATA_SYNC_MODE_2000HZ = 0x03;
+    static const uint16_t ACC_DATA_SYNC_MODE_200HZ = 0x09;
     static const uint8_t ACC_INTA_DISABLE = 0x00;
     static const uint8_t ACC_INTA_ENABLE  = 0x01;
     static const uint8_t ACC_INTB_DISABLE = 0x00;

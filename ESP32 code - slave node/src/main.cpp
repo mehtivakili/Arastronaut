@@ -484,7 +484,7 @@ void sendIMUMAGTask(void * parameter) {
             sendIMU_MAG();
 
             // Optionally, add some delay or task yield if necessary
-            vTaskDelay(1);
+            vTaskDelay(2);
         }
     }
 }
@@ -555,7 +555,7 @@ void setup() {
   // }
 
     /* Start the sensors */
-  status = bmi.begin(Bmi088::ACCEL_RANGE_6G, Bmi088::GYRO_RANGE_1000DPS, Bmi088::ODR_1000HZ);
+  status = bmi.begin(Bmi088::ACCEL_RANGE_12G, Bmi088::GYRO_RANGE_1000DPS, Bmi088::ODR_1000HZ);
   if (status < 0) {
     Serial.println("IMU Initialization Error");
     Serial.println(status);
@@ -563,7 +563,7 @@ void setup() {
   }
   
   /* Set the ranges */
-  status = bmi.setRange(Bmi088::ACCEL_RANGE_6G, Bmi088::GYRO_RANGE_1000DPS);
+  status = bmi.setRange(Bmi088::ACCEL_RANGE_12G, Bmi088::GYRO_RANGE_1000DPS);
   if (status < 0) {
     Serial.println("Failed to set ranges");
     Serial.println(status);
@@ -675,7 +675,7 @@ void logMemory() {
 
 void loop() {
 
-    // DW1000Ranging.loop();
+    DW1000Ranging.loop();
 
     static unsigned long lastIMUSendTime = 0;
     static unsigned long lastRangeTime = 0;
@@ -735,7 +735,7 @@ void loop() {
                     NULL,            // Task input parameter
                     1,               // Priority of the task
                     &sendIMUTaskHandle, // Task handle
-                    1);              // Core 1
+                    0);              // Core 1
             }
         }
         break;
@@ -805,7 +805,7 @@ void loop() {
                       NULL,               // Task input parameter
                       1,                  // Priority of the task
                       &sendIMUMAGTaskHandle, // Task handle
-                      1);                 // Core 1
+                      0);                 // Core 1
               }
           }
           break;
@@ -828,7 +828,7 @@ void loop() {
                     NULL,               // Task input parameter
                     1,                  // Priority of the task
                     &sendIMUMAGTaskHandle, // Task handle
-                    1);                 // Core 1
+                    0);                 // Core 1
             }
         }
 
