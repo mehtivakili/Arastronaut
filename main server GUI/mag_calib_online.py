@@ -18,26 +18,40 @@ sock.bind((UDP_IP, UDP_PORT))
 
 print(f"Listening for UDP packets on port {UDP_PORT}...")
 
-# Global variables for data storage and offsets
+# Global variables for data storage, offsets, and scales
 magnetometer_data = []
 calibrated_data = []
 offsets = np.array([0.0, 0.0, 0.0])
+scales = np.array([1.0, 1.0, 1.0])
 
 def remove_outliers_and_calibrate(data):
     if len(data) == 0:
-        return np.array([0.0, 0.0, 0.0]), data
+        return np.array([0.0, 0.0, 0.0]), np.array([1.0, 1.0, 1.0]), data
     
     data = np.array(data)
     mean = np.mean(data, axis=0)
     std_dev = np.std(data, axis=0)
     
+    # Remove outliers based on z-score
     z_scores = np.abs((data - mean) / std_dev)
     data_filtered = data[(z_scores < 2).all(axis=1)]
     
+    # Calculate offsets
     offsets = np.mean(data_filtered, axis=0)
-    data_corrected = data_filtered - offsets
     
-    return offsets, data_corrected
+    # Calculate min and max values
+    min_values = np.min(data_filtered, axis=0)
+    max_values = np.max(data_filtered, axis=0)
+    
+    # Calculate scaling factors
+    avg_delta = (max_values - min_values) / 2
+    avg_delta_over_axes = np.mean(avg_delta)
+    scales = avg_delta_over_axes / avg_delta
+    
+    # Apply offsets and scaling
+    data_corrected = (data_filtered - offsets) * scales
+    
+    return offsets, scales, data_corrected
 
 def receive_udp_data():
     global rate
@@ -47,7 +61,6 @@ def receive_udp_data():
 
     while True:
         data, addr = sock.recvfrom(4096)
-        # print(f"Received packet from {addr}")
 
         parts = data.split(check_encoded)
         for part in parts:
@@ -59,12 +72,12 @@ def receive_udp_data():
                     magnetometer_data.append([magX, magY, magZ])
 
 def update_plot(frame):
-    global offsets, magnetometer_data, calibrated_data
+    global offsets, scales, magnetometer_data, calibrated_data
     
     if len(magnetometer_data) == 0:
         return
     
-    offsets, corrected_data = remove_outliers_and_calibrate(magnetometer_data)
+    offsets, scales, corrected_data = remove_outliers_and_calibrate(magnetometer_data)
     calibrated_data = corrected_data
     
     ax.clear()
@@ -79,9 +92,11 @@ def update_plot(frame):
     ax.set_zlabel('Z Axis')
     ax.set_title('Real-Time Magnetometer Data')
     
-    # Update the offset text with the latest offsets
-    offset_text.set_text(f"Offsets - X: {offsets[0]:.2f}, Y: {offsets[1]:.2f}, Z: {offsets[2]:.2f}")
+    # Update the offset and scale text with the latest values
+    offset_text.set_text(f"Offsets - X: {offsets[0]:.2f}, Y: {offsets[1]:.2f}, Z: {offsets[2]:.2f}\n"
+                         f"Scales - X: {scales[0]:.2f}, Y: {scales[1]:.2f}, Z: {scales[2]:.2f}")
     print(f"Offsets - X: {offsets[0]:.2f}, Y: {offsets[1]:.2f}, Z: {offsets[2]:.2f}")
+    print(f"Scales - X: {scales[0]:.2f}, Y: {scales[1]:.2f}, Z: {scales[2]:.2f}")
 
     ax.legend()
 
