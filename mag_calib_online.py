@@ -56,6 +56,9 @@ def receive_udp_data():
                 values = struct.unpack('<q9f', part)
                 _, _, _, _, _, _, _, magX, magY, magZ = values
                 if rate % 10 == 0:
+                    # magX = magX - 300
+                    # magY = magY - 270
+                    # magZ = magZ - 50
                     magnetometer_data.append([magX, magY, magZ])
 
 def update_plot(frame):

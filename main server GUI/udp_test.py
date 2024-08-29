@@ -26,7 +26,7 @@ def receive_udp_data():
             if len(part) == 32:  # Check if the packet size is correct (7 floats * 4 bytes each)  44 or 32
                 values = struct.unpack('<q6f', part)  # 9 or 6
                 Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = values  # mx my mz
-                print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})))  #, Mag:(mx, my, mz)"
+                print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")  #, Mag:(mx, my, mz)"
             else:
                 if part:
                     print(f"Received packet of incorrect size: {len(part)} bytes")

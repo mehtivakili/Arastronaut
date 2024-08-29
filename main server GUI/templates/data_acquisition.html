@@ -929,7 +929,7 @@ body.light-theme .collapsible-toggle:hover {
             // const gamma = Math.atan2(gyro[1], gyro[0]) * 180 / Math.PI;
 
             // Calculate yaw (gamma) from the magnetometer data
-            const gamma = Math.atan2(mag[1], mag[0]) * 180 / Math.PI;
+            const gamma = Math.atan2(mag[1] - 270, mag[0] - 300) * 180 / Math.PI;
             currentRotation.alpha = alpha;
             currentRotation.beta = beta;
             currentRotation.gamma = gamma;
