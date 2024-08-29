@@ -14,6 +14,8 @@ UDP_PORT = 12346  # Port to listen on (must match the ESP32 udpPort)
 
 # Create a UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
+
 sock.bind((UDP_IP, UDP_PORT))
 
 print(f"Listening for UDP packets on port {UDP_PORT}...")
@@ -31,10 +33,24 @@ def remove_outliers_and_calibrate(data):
     mean = np.mean(data, axis=0)
     std_dev = np.std(data, axis=0)
     
+    # Removing outliers
     z_scores = np.abs((data - mean) / std_dev)
     data_filtered = data[(z_scores < 2).all(axis=1)]
     
-    offsets = np.mean(data_filtered, axis=0)
+    if len(data_filtered) == 0:
+        return np.array([0.0, 0.0, 0.0]), data
+    
+    # Find the min and max values on each axis
+    min_values = np.min(data_filtered, axis=0)
+    max_values = np.max(data_filtered, axis=0)
+    
+    # Only use the min and max values to calculate offsets
+    extreme_values = np.vstack((min_values, max_values))
+    
+    # Calculate the median of the min and max values
+    offsets = np.median(extreme_values, axis=0)
+    
+    # Apply the offsets to the data
     data_corrected = data_filtered - offsets
     
     return offsets, data_corrected
@@ -47,7 +63,6 @@ def receive_udp_data():
 
     while True:
         data, addr = sock.recvfrom(4096)
-        # print(f"Received packet from {addr}")
 
         parts = data.split(check_encoded)
         for part in parts:
@@ -56,9 +71,9 @@ def receive_udp_data():
                 values = struct.unpack('<q9f', part)
                 _, _, _, _, _, _, _, magX, magY, magZ = values
                 if rate % 10 == 0:
-                    # magX = magX - 300
-                    # magY = magY - 270
-                    # magZ = magZ - 50
+                    magX = magX - 406
+                    magY = magY - 336
+                    magZ = magZ - 38
                     magnetometer_data.append([magX, magY, magZ])
 
 def update_plot(frame):
