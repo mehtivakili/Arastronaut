@@ -1,6 +1,7 @@
 import socket
 import struct
 import numpy as np
+import math
 
 rate = 0
 
@@ -25,6 +26,17 @@ scales = np.array([2510.0, 2172.0, 2356.0])  # Example scales for X, Y, Z axes
 def calibrate_data(data, offsets, scales):
     # Subtract the offsets and divide by the scales to normalize the data
     return (data - offsets) / scales
+
+def calculate_heading(x, y):
+    # Calculate the heading in radians, then convert to degrees
+    heading_rad = math.atan2(y, x)
+    heading_deg = math.degrees(heading_rad)
+    
+    # Ensure the heading is in the range [0, 360]
+    if heading_deg < 0:
+        heading_deg += 360
+    
+    return heading_deg
 
 def receive_udp_data():
     global rate, magnetometer_data
@@ -52,8 +64,11 @@ def receive_udp_data():
                     raw_data = np.array([magX, magY, magZ])
                     calibrated_data = calibrate_data(raw_data, offsets, scales)
                     
-                    # Print calibrated data
-                    print(f"Calibrated Data - X: {calibrated_data[0]:.2f}, Y: {calibrated_data[1]:.2f}, Z: {calibrated_data[2]:.2f}")
+                    # Calculate heading
+                    heading = calculate_heading(calibrated_data[0], calibrated_data[1])
+                    
+                    # Print calibrated data and heading
+                    print(f"Calibrated Data - X: {calibrated_data[0]:.2f}, Y: {calibrated_data[1]:.2f}, Z: {calibrated_data[2]:.2f}, Heading: {heading:.2f}°")
 
 # Start the UDP data reception
 receive_udp_data()
