@@ -77,6 +77,10 @@ def receive_udp_data():
                     # magX = magX - 406
                     # magY = magY - 336
                     # magZ = magZ - 38
+                    #after setting declination
+                    magX = magX - 516
+                    magY = magY - 322
+                    magZ = magZ - 141
                     magnetometer_data.append([magX, magY, magZ])
 
 def update_plot(frame):

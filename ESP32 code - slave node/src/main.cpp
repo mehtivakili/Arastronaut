@@ -555,7 +555,7 @@ void setup() {
   // }
 
     /* Start the sensors */
-  status = bmi.begin(Bmi088::ACCEL_RANGE_12G, Bmi088::GYRO_RANGE_1000DPS, Bmi088::ODR_1000HZ);
+  status = bmi.begin(Bmi088::ACCEL_RANGE_3G, Bmi088::GYRO_RANGE_125DPS, Bmi088::ODR_1000HZ);
   if (status < 0) {
     Serial.println("IMU Initialization Error");
     Serial.println(status);
@@ -563,7 +563,7 @@ void setup() {
   }
   
   /* Set the ranges */
-  status = bmi.setRange(Bmi088::ACCEL_RANGE_12G, Bmi088::GYRO_RANGE_1000DPS);
+  status = bmi.setRange(Bmi088::ACCEL_RANGE_3G, Bmi088::GYRO_RANGE_125DPS);
   if (status < 0) {
     Serial.println("Failed to set ranges");
     Serial.println(status);
@@ -619,6 +619,7 @@ void setup() {
   // Serial.println(AP_IP);
 
   compass.init();
+  compass.setMagneticDeclination(54, 58); // Set magnetic declination for your location (degrees, minutes)
 
     // Create the task for sending IMU data on Core 1
     // xTaskCreatePinnedToCore(

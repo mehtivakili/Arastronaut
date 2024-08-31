@@ -27,8 +27,8 @@ mag_cov_matrix = np.array([
 ])
 
 # Magnetometer calibration offsets and scales
-mag_offsets = np.array([537.0, 214.0, 55.0])  # Example offsets for X, Y, Z axes
-mag_scales = np.array([2510.0, 2172.0, 2356.0])  # Example scales for X, Y, Z axes
+mag_offsets = np.array([516.0, 322.0, 141.0])  # Example offsets for X, Y, Z axes
+mag_scales = np.array([2499.0, 2417.0, 2575.0])  # Example scales for X, Y, Z axes
 
 # Initial Kalman filter states
 acc_P = np.eye(3)  # Error covariance matrix for accelerometer
