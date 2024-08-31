@@ -555,7 +555,7 @@ void setup() {
   // }
 
     /* Start the sensors */
-  status = bmi.begin(Bmi088::ACCEL_RANGE_3G, Bmi088::GYRO_RANGE_125DPS, Bmi088::ODR_1000HZ);
+  status = bmi.begin(Bmi088::ACCEL_RANGE_3G, Bmi088::GYRO_RANGE_500DPS, Bmi088::ODR_1000HZ);
   if (status < 0) {
     Serial.println("IMU Initialization Error");
     Serial.println(status);
@@ -563,7 +563,7 @@ void setup() {
   }
   
   /* Set the ranges */
-  status = bmi.setRange(Bmi088::ACCEL_RANGE_3G, Bmi088::GYRO_RANGE_125DPS);
+  status = bmi.setRange(Bmi088::ACCEL_RANGE_3G, Bmi088::GYRO_RANGE_500DPS);
   if (status < 0) {
     Serial.println("Failed to set ranges");
     Serial.println(status);
@@ -571,7 +571,7 @@ void setup() {
   }
   
   /* Set the output data rate */
-  status = bmi.setOdr(Bmi088::ODR_400HZ);
+  status = bmi.setOdr(Bmi088::ODR_200HZ);
   if (status < 0) {
     Serial.println("Failed to set ODR");
     Serial.println(status);
