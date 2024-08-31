@@ -19,13 +19,12 @@ gyro_cov_matrix = np.array([
     [-8.375072e-08, 1.143754e-07, 8.101775e-07]
 ])
 
-# Calibration matrices and offsets (assuming they are loaded or defined earlier)
-acc_misalignment = np.eye(3)  # Example, should be replaced with actual calibration data
-acc_scale = np.eye(3)  # Example, should be replaced with actual calibration data
-acc_bias = np.zeros(3)  # Example, should be replaced with actual calibration data
-gyro_misalignment = np.eye(3)  # Example, should be replaced with actual calibration data
-gyro_scale = np.eye(3)  # Example, should be replaced with actual calibration data
-gyro_bias = np.zeros(3)  # Example, should be replaced with actual calibration data
+# Magnetometer covariance matrix
+mag_cov_matrix = np.array([
+    [0.001, 0.0001, 0.0001],
+    [0.0001, 0.002, 0.0002],
+    [0.0001, 0.0002, 0.0015]
+])
 
 # Magnetometer calibration offsets and scales
 mag_offsets = np.array([537.0, 214.0, 55.0])  # Example offsets for X, Y, Z axes
@@ -34,14 +33,49 @@ mag_scales = np.array([2510.0, 2172.0, 2356.0])  # Example scales for X, Y, Z ax
 # Initial Kalman filter states
 acc_P = np.eye(3)  # Error covariance matrix for accelerometer
 gyro_P = np.eye(3)  # Error covariance matrix for gyroscope
+mag_P = np.eye(3)  # Error covariance matrix for magnetometer
 
-# Measurement noise covariance (can be adjusted)
+# Measurement noise covariance
 R_acc = np.eye(3) * 0.01
 R_gyro = np.eye(3) * 0.01
+R_mag = mag_cov_matrix  # Use the magnetometer covariance matrix here
 
 # Initial states
 acc_x = np.zeros((3, 1))
 gyro_x = np.zeros((3, 1))
+mag_x = np.zeros((3, 1))
+
+# Function to load IMU calibration data from files
+def load_calibration(file):
+    with open(file, 'r') as f:
+        lines = f.readlines()
+
+    # Parse misalignment matrix
+    misalignment = np.array([
+        [float(x) for x in lines[0].split()],
+        [float(x) for x in lines[1].split()],
+        [float(x) for x in lines[2].split()]
+    ])
+
+    # Parse scale matrix
+    scale = np.array([
+        [float(x) for x in lines[4].split()],
+        [float(x) for x in lines[5].split()],
+        [float(x) for x in lines[6].split()]
+    ])
+
+    # Parse bias vector
+    bias = np.array([
+        float(lines[8].split()[0]),
+        float(lines[9].split()[0]),
+        float(lines[10].split()[0])
+    ])
+
+    return misalignment, scale, bias
+
+# Load calibration data for accelerometer and gyroscope
+acc_misalignment, acc_scale, acc_bias = load_calibration('./main server GUI/calib_data/test_imu_acc.calib')
+gyro_misalignment, gyro_scale, gyro_bias = load_calibration('./main server GUI/calib_data/test_imu_gyro.calib')
 
 # Function to apply calibration to accelerometer and gyroscope
 def apply_calibration(accel, gyro):
@@ -149,6 +183,7 @@ sock.bind((UDP_IP, UDP_PORT))
 
 # Start time
 prev_yaw = 0.0  # Initialize previous yaw
+rate = 0
 
 # Main loop to update the cube
 while True:
@@ -159,56 +194,62 @@ while True:
 
     for part in parts:
         if len(part) == 44:  # 64-bit timestamp + 9 floats
-            values = struct.unpack('<q9f', part)
-            timestamp_ns = values[0]
-            timestamp_s = timestamp_ns / 1e9  # Convert nanoseconds to seconds
-            accelX, accelY, accelZ, gyroX, gyroY, gyroZ, magX, magY, magZ = values[1:]
+            rate = rate + 1
+            if rate == 30:
+                values = struct.unpack('<q9f', part)
+                timestamp_ns = values[0]
+                timestamp_s = timestamp_ns / 1e9  # Convert nanoseconds to seconds
+                accelX, accelY, accelZ, gyroX, gyroY, gyroZ, magX, magY, magZ = values[1:]
 
-            accel = np.array([accelX, accelY, accelZ])
-            gyro = np.array([gyroX, gyroY, gyroZ])
-            mag = np.array([magX, magY, magZ])
+                accel = np.array([accelX, accelY, accelZ])
+                gyro = np.array([gyroX, gyroY, gyroZ])
+                mag = np.array([magX, magY, magZ])
 
-            # Apply calibration to accelerometer and gyroscope data
-            accel, gyro = apply_calibration(accel, gyro)
+                # Apply calibration to accelerometer and gyroscope data
+                accel, gyro = apply_calibration(accel, gyro)
 
-            # Calibrate magnetometer data
-            mag = calibrate_data(mag, mag_offsets, mag_scales)
+                # Calibrate magnetometer data
+                mag = calibrate_data(mag, mag_offsets, mag_scales)
 
-            # Apply Kalman filter to accelerometer data
-            acc_x, acc_P = kalman_filter(accel, acc_x, acc_P, acc_cov_matrix, R_acc)
+                # Apply Kalman filter to accelerometer data
+                acc_x, acc_P = kalman_filter(accel, acc_x, acc_P, acc_cov_matrix, R_acc)
 
-            # Apply Kalman filter to gyroscope data
-            gyro_x, gyro_P = kalman_filter(gyro, gyro_x, gyro_P, gyro_cov_matrix, R_gyro)
+                # Apply Kalman filter to gyroscope data
+                gyro_x, gyro_P = kalman_filter(gyro, gyro_x, gyro_P, gyro_cov_matrix, R_gyro)
 
-            # Calculate time difference
-            current_time = time.time()
-            dt = current_time - timestamp_s
+                # Apply Kalman filter to magnetometer data
+                mag_x, mag_P = kalman_filter(mag, mag_x, mag_P, mag_cov_matrix, R_mag)
 
-            # Calculate roll, pitch, and yaw using the filtered data
-            roll, pitch, yaw = calculate_roll_pitch_yaw(acc_x.flatten(), gyro_x.flatten(), mag, dt, prev_yaw)
-            prev_yaw = yaw  # Update the previous yaw
+                # Calculate time difference
+                current_time = time.time()
+                dt = current_time - timestamp_s
 
-            # Rotate cube vertices
-            rotated_vertices = rotate_cube(cube_vertices, roll, pitch, yaw)
-            faces = get_cube_faces(rotated_vertices)
+                # Calculate roll, pitch, and yaw using the filtered data
+                roll, pitch, yaw = calculate_roll_pitch_yaw(acc_x.flatten(), gyro_x.flatten(), mag_x.flatten(), dt, prev_yaw)
+                prev_yaw = yaw  # Update the previous yaw
 
-            # Clear the plot
-            ax.clear()
+                # Rotate cube vertices
+                rotated_vertices = rotate_cube(cube_vertices, roll, pitch, yaw)
+                faces = get_cube_faces(rotated_vertices)
 
-            # Plot the cube
-            ax.add_collection3d(Poly3DCollection(faces, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
+                # Clear the plot
+                ax.clear()
 
-            # Set the axes limits
-            ax.set_xlim([-cube_size, cube_size])
-            ax.set_ylim([-cube_size, cube_size])
-            ax.set_zlim([-cube_size, cube_size])
+                # Plot the cube
+                ax.add_collection3d(Poly3DCollection(faces, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
 
-            # Set labels and title
-            ax.set_xlabel('X')
-            ax.set_ylabel('Y')
-            ax.set_zlabel('Z')
-            ax.set_title(f'Cube Rotation - Roll: {roll:.2f}, Pitch: {pitch:.2f}, Yaw: {yaw:.2f}')
+                # Set the axes limits
+                ax.set_xlim([-cube_size, cube_size])
+                ax.set_ylim([-cube_size, cube_size])
+                ax.set_zlim([-cube_size, cube_size])
 
-            plt.pause(0.01)  # Pause to update the plot
+                # Set labels and title
+                ax.set_xlabel('X')
+                ax.set_ylabel('Y')
+                ax.set_zlabel('Z')
+                ax.set_title(f'Cube Rotation - Roll: {roll:.2f}, Pitch: {pitch:.2f}, Yaw: {yaw:.2f}')
+
+                plt.pause(0.01)  # Pause to update the plot
+                rate = 0
 
 plt.show()

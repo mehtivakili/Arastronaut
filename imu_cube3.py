@@ -149,6 +149,8 @@ sock.bind((UDP_IP, UDP_PORT))
 
 # Start time
 prev_yaw = 0.0  # Initialize previous yaw
+rate = 200
+rate = 0
 
 # Main loop to update the cube
 while True:
@@ -159,56 +161,59 @@ while True:
 
     for part in parts:
         if len(part) == 44:  # 64-bit timestamp + 9 floats
-            values = struct.unpack('<q9f', part)
-            timestamp_ns = values[0]
-            timestamp_s = timestamp_ns / 1e9  # Convert nanoseconds to seconds
-            accelX, accelY, accelZ, gyroX, gyroY, gyroZ, magX, magY, magZ = values[1:]
+            rate = rate + 1
+            if rate == 30:
+                values = struct.unpack('<q9f', part)
+                timestamp_ns = values[0]
+                timestamp_s = timestamp_ns / 1e9  # Convert nanoseconds to seconds
+                accelX, accelY, accelZ, gyroX, gyroY, gyroZ, magX, magY, magZ = values[1:]
 
-            accel = np.array([accelX, accelY, accelZ])
-            gyro = np.array([gyroX, gyroY, gyroZ])
-            mag = np.array([magX, magY, magZ])
+                accel = np.array([accelX, accelY, accelZ])
+                gyro = np.array([gyroX, gyroY, gyroZ])
+                mag = np.array([magX, magY, magZ])
 
-            # Apply calibration to accelerometer and gyroscope data
-            accel, gyro = apply_calibration(accel, gyro)
+                # Apply calibration to accelerometer and gyroscope data
+                accel, gyro = apply_calibration(accel, gyro)
 
-            # Calibrate magnetometer data
-            mag = calibrate_data(mag, mag_offsets, mag_scales)
+                # Calibrate magnetometer data
+                mag = calibrate_data(mag, mag_offsets, mag_scales)
 
-            # Apply Kalman filter to accelerometer data
-            acc_x, acc_P = kalman_filter(accel, acc_x, acc_P, acc_cov_matrix, R_acc)
+                # Apply Kalman filter to accelerometer data
+                acc_x, acc_P = kalman_filter(accel, acc_x, acc_P, acc_cov_matrix, R_acc)
 
-            # Apply Kalman filter to gyroscope data
-            gyro_x, gyro_P = kalman_filter(gyro, gyro_x, gyro_P, gyro_cov_matrix, R_gyro)
+                # Apply Kalman filter to gyroscope data
+                gyro_x, gyro_P = kalman_filter(gyro, gyro_x, gyro_P, gyro_cov_matrix, R_gyro)
 
-            # Calculate time difference
-            current_time = time.time()
-            dt = current_time - timestamp_s
+                # Calculate time difference
+                current_time = time.time()
+                dt = current_time - timestamp_s
 
-            # Calculate roll, pitch, and yaw using the filtered data
-            roll, pitch, yaw = calculate_roll_pitch_yaw(acc_x.flatten(), gyro_x.flatten(), mag, dt, prev_yaw)
-            prev_yaw = yaw  # Update the previous yaw
+                # Calculate roll, pitch, and yaw using the filtered data
+                roll, pitch, yaw = calculate_roll_pitch_yaw(acc_x.flatten(), gyro_x.flatten(), mag, dt, prev_yaw)
+                prev_yaw = yaw  # Update the previous yaw
 
-            # Rotate cube vertices
-            rotated_vertices = rotate_cube(cube_vertices, roll, pitch, yaw)
-            faces = get_cube_faces(rotated_vertices)
+                # Rotate cube vertices
+                rotated_vertices = rotate_cube(cube_vertices, roll, pitch, yaw)
+                faces = get_cube_faces(rotated_vertices)
 
-            # Clear the plot
-            ax.clear()
+                # Clear the plot
+                ax.clear()
 
-            # Plot the cube
-            ax.add_collection3d(Poly3DCollection(faces, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
+                # Plot the cube
+                ax.add_collection3d(Poly3DCollection(faces, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
 
-            # Set the axes limits
-            ax.set_xlim([-cube_size, cube_size])
-            ax.set_ylim([-cube_size, cube_size])
-            ax.set_zlim([-cube_size, cube_size])
+                # Set the axes limits
+                ax.set_xlim([-cube_size, cube_size])
+                ax.set_ylim([-cube_size, cube_size])
+                ax.set_zlim([-cube_size, cube_size])
 
-            # Set labels and title
-            ax.set_xlabel('X')
-            ax.set_ylabel('Y')
-            ax.set_zlabel('Z')
-            ax.set_title(f'Cube Rotation - Roll: {roll:.2f}, Pitch: {pitch:.2f}, Yaw: {yaw:.2f}')
+                # Set labels and title
+                ax.set_xlabel('X')
+                ax.set_ylabel('Y')
+                ax.set_zlabel('Z')
+                ax.set_title(f'Cube Rotation - Roll: {roll:.2f}, Pitch: {pitch:.2f}, Yaw: {yaw:.2f}')
 
-            plt.pause(0.01)  # Pause to update the plot
+                plt.pause(0.01)  # Pause to update the plot
+                rate = 0
 
 plt.show()

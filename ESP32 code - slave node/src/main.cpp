@@ -735,7 +735,7 @@ void loop() {
                     NULL,            // Task input parameter
                     1,               // Priority of the task
                     &sendIMUTaskHandle, // Task handle
-                    0);              // Core 1
+                    1);              // Core 1
             }
         }
         break;
@@ -805,7 +805,7 @@ void loop() {
                       NULL,               // Task input parameter
                       1,                  // Priority of the task
                       &sendIMUMAGTaskHandle, // Task handle
-                      0);                 // Core 1
+                      1);                 // Core 1
               }
           }
           break;
@@ -828,7 +828,7 @@ void loop() {
                     NULL,               // Task input parameter
                     1,                  // Priority of the task
                     &sendIMUMAGTaskHandle, // Task handle
-                    0);                 // Core 1
+                    1);                 // Core 1
             }
         }
 
