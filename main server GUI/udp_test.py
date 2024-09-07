@@ -12,8 +12,8 @@ sock.bind((UDP_IP, UDP_PORT))
 print(f"Listening for UDP packets on port {UDP_PORT}...")
 
 def receive_udp_data():
-    # check = "img/"
-    check = "abc/"
+    check = "img/"
+    # check = "abc/"
 
     check_encoded = check.encode()
 
@@ -23,10 +23,10 @@ def receive_udp_data():
 
         parts = data.split(check_encoded)
         for part in parts:
-            if len(part) == 32:  # Check if the packet size is correct (7 floats * 4 bytes each)  44 or 32
-                values = struct.unpack('<q6f', part)  # 9 or 6
-                Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ = values  # mx my mz
-                print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f})")  #, Mag:(mx, my, mz)"
+            if len(part) == 44:  # Check if the packet size is correct long64(8 bytes) + (6 floats * 4 bytes each)  44 or 32
+                values = struct.unpack('<q9f', part)  # 9 or 6
+                Tio, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, mx, my, mz = values  # mx my mz
+                print(f"Tio: {Tio:.3f}, Accel: ({accelX:.2f}, {accelY:.2f}, {accelZ:.2f}), Gyro: ({gyroX:.2f}, {gyroY:.2f}, {gyroZ:.2f}), Mag:({mx}, {my}, {mz}")
             else:
                 if part:
                     print(f"Received packet of incorrect size: {len(part)} bytes")
