@@ -15,7 +15,6 @@ UDP_PORT = 12346  # Port to listen on (must match the ESP32 udpPort)
 # Create a UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow the socket to reuse the address
-
 sock.bind((UDP_IP, UDP_PORT))
 
 print(f"Listening for UDP packets on port {UDP_PORT}...")
@@ -24,10 +23,11 @@ print(f"Listening for UDP packets on port {UDP_PORT}...")
 magnetometer_data = []
 calibrated_data = []
 offsets = np.array([0.0, 0.0, 0.0])
+scales = np.array([1.0, 1.0, 1.0])  # Initialize scale factors
 
-def remove_outliers_and_calibrate(data):
+def remove_outliers_calibrate_and_scale(data):
     if len(data) == 0:
-        return np.array([0.0, 0.0, 0.0]), data
+        return np.array([0.0, 0.0, 0.0]), data, np.array([1.0, 1.0, 1.0])
     
     data = np.array(data)
     mean = np.mean(data, axis=0)
@@ -38,7 +38,7 @@ def remove_outliers_and_calibrate(data):
     data_filtered = data[(z_scores < 2).all(axis=1)]
     
     if len(data_filtered) == 0:
-        return np.array([0.0, 0.0, 0.0]), data
+        return np.array([0.0, 0.0, 0.0]), data, np.array([1.0, 1.0, 1.0])
     
     # Find the min and max values on each axis
     min_values = np.min(data_filtered, axis=0)
@@ -50,10 +50,13 @@ def remove_outliers_and_calibrate(data):
     # Calculate the median of the min and max values
     offsets = np.median(extreme_values, axis=0)
     
+    # Calculate the scale (range) for each axis
+    scales = max_values - min_values
+    
     # Apply the offsets to the data
     data_corrected = data_filtered - offsets
     
-    return offsets, data_corrected
+    return offsets, data_corrected, scales
 
 def receive_udp_data():
     global rate
@@ -70,19 +73,22 @@ def receive_udp_data():
                 rate += 1
                 values = struct.unpack('<q9f', part)
                 _, _, _, _, _, _, _, magX, magY, magZ = values
-                if rate % 10 == 0:
-                    magX = magX - 406
-                    magY = magY - 336
-                    magZ = magZ - 38
+                if rate % 2 == 0:
+                    # magX = magX - 406
+                    # magY = magY - 336
+                    # magZ = magZ - 38
+                    magX = magX - 86
+                    magY = magY - 141
+                    magZ = magZ + 105
                     magnetometer_data.append([magX, magY, magZ])
 
 def update_plot(frame):
-    global offsets, magnetometer_data, calibrated_data
+    global offsets, magnetometer_data, calibrated_data, scales
     
     if len(magnetometer_data) == 0:
         return
     
-    offsets, corrected_data = remove_outliers_and_calibrate(magnetometer_data)
+    offsets, corrected_data, scales = remove_outliers_calibrate_and_scale(magnetometer_data)
     calibrated_data = corrected_data
     
     ax.clear()
@@ -97,9 +103,11 @@ def update_plot(frame):
     ax.set_zlabel('Z Axis')
     ax.set_title('Real-Time Magnetometer Data')
     
-    # Update the offset text with the latest offsets
+    # Update the offset and scale text with the latest values
     offset_text.set_text(f"Offsets - X: {offsets[0]:.2f}, Y: {offsets[1]:.2f}, Z: {offsets[2]:.2f}")
+    scale_text.set_text(f"Scales - X: {scales[0]:.2f}, Y: {scales[1]:.2f}, Z: {scales[2]:.2f}")
     print(f"Offsets - X: {offsets[0]:.2f}, Y: {offsets[1]:.2f}, Z: {offsets[2]:.2f}")
+    print(f"Scales - X: {scales[0]:.2f}, Y: {scales[1]:.2f}, Z: {scales[2]:.2f}")
 
     ax.legend()
 
@@ -107,6 +115,7 @@ def update_plot(frame):
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 offset_text = ax.text2D(0.05, 0.95, "", transform=ax.transAxes)
+scale_text = ax.text2D(0.05, 0.90, "", transform=ax.transAxes)  # Add scale text display
 
 # Start the animation for real-time plotting
 ani = FuncAnimation(fig, update_plot, interval=100)
@@ -117,3 +126,4 @@ udp_thread.start()
 
 # Show the plot
 plt.show()
+
