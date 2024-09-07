@@ -21,7 +21,7 @@ volatile bool imuDataReadyToSend = false;
 TaskHandle_t sendIMUMAGTaskHandle = NULL;
 volatile bool imuMagDataReadyToSend = false;
 
-
+bool rawData = true;
 
 extern volatile int counter;
 extern volatile int uwbReady;
@@ -55,7 +55,7 @@ const uint8_t PIN_SS = 5;   // spi select pin
 char tag_addr[] = "7D:00:22:EA:82:60:3B:9C";
 
 const char* ap_ssid = "ESP32_AP";
-const char* ap_password = "12345678";
+const char* ap_password = "123456789";
 const char* udpAddress = "192.168.4.100";  // The IP address of the Python client (update this to match your PC's IP)
 const int udpPort = 12346;  // The port to send data to
 
@@ -81,10 +81,11 @@ enum Mode {
   COMPASS = 4,
   IMU_COMPASS = 5,
   IMU_UWB_COMPASS = 6,
+  IMU_ONLY_2 = 7,
   Terminate = 99
 };
 
-Mode currentMode = IMU_ONLY;
+Mode currentMode = IMU_COMPASS;
 
 const char* IMU_SEPARATOR = "abc/";
 const char* UWB_SEPARATOR = "cba/";
@@ -126,6 +127,18 @@ void handleStart() {
 void handleStop() {
   sendData = false;
   server.send(200, "text/plain", "Data transmission stopped");
+}
+
+void handleRawData(){
+  if (rawData == true){
+    rawData = false;
+    server.send(200, "text/plain", "Raw data set to " + String(rawData));
+
+  } else {
+    rawData = true;
+    server.send(200, "text/plain", "Raw data set to " + String(rawData));
+
+  }
 }
 
 void handleSetBatch() {
@@ -257,13 +270,24 @@ void sendIMUData() {
   // float tio_millis = static_cast<float>(millis());
   // Tio = tio_millis / 1000.0;
   // myArray[0] = Tio;
+  // if(rawData == true){
+    myArray[1] = accelX_raw;
+    myArray[2] = accelY_raw;
+    myArray[3] = accelZ_raw;
+    myArray[4] = gyroX_raw;
+    myArray[5] = gyroY_raw;
+    myArray[6] = gyroZ_raw;
+  // } else {
+  //   myArray[1] = bmi.getAccelX_mss();
+  //   myArray[2] = bmi.getAccelY_mss();
+  //   myArray[3] = bmi.getAccelZ_mss();
+  //   myArray[4] = bmi.getGyroX_rads();
+  //   myArray[5] = bmi.getGyroY_rads();
+  //   myArray[6] = bmi.getGyroZ_rads();
+  // }
 
-  myArray[1] = accelX_raw;
-  myArray[2] = accelY_raw;
-  myArray[3] = accelZ_raw;
-  myArray[4] = gyroX_raw;
-  myArray[5] = gyroY_raw;
-  myArray[6] = gyroZ_raw;
+
+
 
   std::vector<uint8_t> imuData;
 
@@ -563,7 +587,7 @@ void setup() {
   }
   
   /* Set the ranges */
-  status = bmi.setRange(Bmi088::ACCEL_RANGE_12G, Bmi088::GYRO_RANGE_1000DPS);
+  status = bmi.setRange(Bmi088::ACCEL_RANGE_6G, Bmi088::GYRO_RANGE_1000DPS);
   if (status < 0) {
     Serial.println("Failed to set ranges");
     Serial.println(status);
@@ -571,7 +595,7 @@ void setup() {
   }
   
   /* Set the output data rate */
-  status = bmi.setOdr(Bmi088::ODR_400HZ);
+  status = bmi.setOdr(Bmi088::ODR_200HZ);
   if (status < 0) {
     Serial.println("Failed to set ODR");
     Serial.println(status);
@@ -617,6 +641,8 @@ void setup() {
   // Serial.println(ap_ssid);
   // Serial.print("AP IP address: ");
   // Serial.println(AP_IP);
+  
+  compass.setMagneticDeclination(54, 58); // Set magnetic declination for your location (degrees, minutes)
 
   compass.init();
 
@@ -654,6 +680,7 @@ void setup() {
   server.on("/stop", handleStop);
   server.on("/setBatch", handleSetBatch);
   server.on("/mode", handleModeChange);
+  // server.on("/rawSwitch", handleRawData);
 
   server.begin();
 
@@ -835,6 +862,11 @@ void loop() {
         // Ensure UWB data is processed
           DW1000Ranging.loop();
         break;
+
+        // case IMU_ONLY_2:
+
+
+
         case Terminate:
           // Optionally delete tasks if switching out of states
           if (sendIMUTaskHandle != NULL) {
@@ -845,6 +877,7 @@ void loop() {
               vTaskDelete(sendIMUMAGTaskHandle);
               sendIMUMAGTaskHandle = NULL;
         }
+
 
     default:
         // Optionally delete tasks if switching out of states
