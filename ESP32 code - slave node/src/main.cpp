@@ -587,7 +587,7 @@ void setup() {
   }
   
   /* Set the ranges */
-  status = bmi.setRange(Bmi088::ACCEL_RANGE_12G, Bmi088::GYRO_RANGE_1000DPS);
+  status = bmi.setRange(Bmi088::ACCEL_RANGE_6G, Bmi088::GYRO_RANGE_1000DPS);
   if (status < 0) {
     Serial.println("Failed to set ranges");
     Serial.println(status);
@@ -763,7 +763,7 @@ void loop() {
                     NULL,            // Task input parameter
                     1,               // Priority of the task
                     &sendIMUTaskHandle, // Task handle
-                    1);              // Core 1
+                    0);              // Core 1
             }
         }
         break;
@@ -833,7 +833,7 @@ void loop() {
                       NULL,               // Task input parameter
                       1,                  // Priority of the task
                       &sendIMUMAGTaskHandle, // Task handle
-                      1);                 // Core 1
+                      0);                 // Core 1
               }
           }
           break;
@@ -856,7 +856,7 @@ void loop() {
                     NULL,               // Task input parameter
                     1,                  // Priority of the task
                     &sendIMUMAGTaskHandle, // Task handle
-                    1);                 // Core 1
+                    0);                 // Core 1
             }
         }
 
