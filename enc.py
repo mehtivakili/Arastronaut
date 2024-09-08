@@ -17,11 +17,11 @@ prev_angle = None
 log_file = "encoder_angle_omega_data.txt"
 
 # Set initial angle (hard-coded) and starting position
-initial_angle_offset = 0.0  # Set initial position angle (e.g., starting at -150°)
+initial_angle_offset = 18.0  # Set initial position angle (e.g., starting at -150°)
 starting_position = 0  # Initial encoder position, change if necessary
 
 # Invert direction of encoder (True = invert, False = no inversion)
-invert_direction = False  # Set to True to invert encoder direction
+invert_direction = True  # Set to True to invert encoder direction
 
 def calculate_angle_omega(position, current_time):
     global prev_position, prev_time, prev_angle
