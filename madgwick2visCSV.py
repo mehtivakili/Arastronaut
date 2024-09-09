@@ -7,6 +7,8 @@ from ahrs.filters import Madgwick
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial.transform import Rotation as R
+import time
+import csv
 
 # Function to load IMU calibration data from files
 def load_calibration(file):
@@ -282,59 +284,67 @@ def visualization_thread(data_queue):
     # Define colors for each face
     face_colors = ['blue', 'red', 'yellow', 'blue', 'red', 'yellow']
     rate2 = 0
+    # Open the CSV file for writing
+    with open("rpq_data.csv", mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Timestamp", "Roll", "Pitch", "Yaw"])  # Write header
+        
+        while True:
+            try:
+                # Get data from the queue
+                # roll, pitch, yaw = data_queue.get()
+                q = data_queue.get()
+                # In your visualization_thread, print the length of q to check it
+                # print(f"Quaternion length: {len(q)}")  # This should be 4
+                # Rotate cube vertices
+                # rotated_vertices = rotate_cube(cube_vertices, roll, pitch, yaw)
+                rotated_vertices = rotate_cube_with_quaternion(cube_vertices, q)
 
-    while True:
-        try:
-            # Get data from the queue
-            # roll, pitch, yaw = data_queue.get()
-            q = data_queue.get()
-            # In your visualization_thread, print the length of q to check it
-            # print(f"Quaternion length: {len(q)}")  # This should be 4
-            # Rotate cube vertices
-            # rotated_vertices = rotate_cube(cube_vertices, roll, pitch, yaw)
-            rotated_vertices = rotate_cube_with_quaternion(cube_vertices, q)
+                faces = get_cube_faces(rotated_vertices)
 
-            faces = get_cube_faces(rotated_vertices)
+                # Clear the plot
+                ax.clear()
 
-            # Clear the plot
-            ax.clear()
+                # Plot the cube
+                ax.add_collection3d(Poly3DCollection(faces, facecolors=face_colors, linewidths=1, edgecolors='r', alpha=.25))
 
-            # Plot the cube
-            ax.add_collection3d(Poly3DCollection(faces, facecolors=face_colors, linewidths=1, edgecolors='r', alpha=.25))
+                # Set the axes limits
+                ax.set_xlim([-cube_size, cube_size])
+                ax.set_ylim([-cube_size, cube_size])
+                ax.set_zlim([-cube_size, cube_size])
+                
+                #             # Assuming q is [w, x, y, z] quaternion format
+                # pitch = np.arctan2(2.0 euler_angles = quaternion_to_euler(q)
+                euler_angles = quaternion_to_euler(q)
+                roll, pitch, yaw = euler_angles 
+                        
+                # # Convert to degrees
+                yaw = np.degrees(yaw)
+                pitch = np.degrees(pitch)
+                roll = np.degrees(roll)   
+                rate2 = rate2 + 1
+                if rate2 == 1:
+                                    # Write system time and Euler angles to the CSV file
+                    current_time = time.time()  # Get the current system time
+                    writer.writerow([current_time, roll, pitch, yaw])
 
-            # Set the axes limits
-            ax.set_xlim([-cube_size, cube_size])
-            ax.set_ylim([-cube_size, cube_size])
-            ax.set_zlim([-cube_size, cube_size])
-            
-            #             # Assuming q is [w, x, y, z] quaternion format
-            # pitch = np.arctan2(2.0 euler_angles = quaternion_to_euler(q)
-            euler_angles = quaternion_to_euler(q)
-            roll, pitch, yaw = euler_angles 
-                    
-            # # Convert to degrees
-            yaw = np.degrees(yaw)
-            pitch = np.degrees(pitch)
-            roll = np.degrees(roll)   
-            rate2 = rate2 + 1
-            if rate2 == 2:
-                print(f"Roll: {pitch}, Pitch: {roll}, Yaw: {yaw}")
-                # print(f"Quaternion: {q}")
-                # print(accel, gyro, mag)
-                rate2 = 0
+                    print(f"Roll: {pitch}, Pitch: {roll}, Yaw: {yaw}")
+                    # print(f"Quaternion: {q}")
+                    # print(accel, gyro, mag)
+                    rate2 = 0
 
-            # Set labels and title
-            ax.set_xlabel('X')
-            ax.set_ylabel('Y')
-            ax.set_zlabel('Z')
-            # ax.set_title('Cube Rotation using Quaternion')
+                # Set labels and title
+                ax.set_xlabel('X')
+                ax.set_ylabel('Y')
+                ax.set_zlabel('Z')
+                # ax.set_title('Cube Rotation using Quaternion')
 
-            ax.set_title(f'Cube Rotation - Roll: {pitch:.2f}, Pitch: {roll:.2f}, Yaw: {yaw:.2f}')
+                ax.set_title(f'Cube Rotation - Roll: {pitch:.2f}, Pitch: {roll:.2f}, Yaw: {yaw:.2f}')
 
-            plt.pause(0.01)  # Pause to update the plot
+                plt.pause(0.01)  # Pause to update the plot
 
-        except queue.Empty:
-            pass
+            except queue.Empty:
+                pass
 
 # UDP setup
 UDP_IP = "0.0.0.0"
