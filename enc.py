@@ -6,7 +6,7 @@ ser = serial.Serial('COM4', 915200)  # Replace with your serial port
 ser.flushInput()
 
 # Constants
-PULSES_PER_REV = 600  # Encoder has 600 pulses per 360° rotation
+PULSES_PER_REV = 583  # Encoder has 600 pulses per 360° rotation
 
 # Variables to store previous position and time for omega (angular velocity) calculation
 prev_position = None
@@ -17,7 +17,7 @@ prev_angle = None
 log_file = "encoder_angle_omega_data.txt"
 
 # Set initial angle (hard-coded) and starting position
-initial_angle_offset = 18.0  # Set initial position angle (e.g., starting at -150°)
+initial_angle_offset = 82.0  # Set initial position angle (e.g., starting at -150°)
 starting_position = 0  # Initial encoder position, change if necessary
 
 # Invert direction of encoder (True = invert, False = no inversion)
