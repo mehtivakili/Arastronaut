@@ -9,9 +9,10 @@ from ahrs.filters import Madgwick
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 import traceback
+import csv
 
 # Encoder parameters
-PULSES_PER_REV = 588  # Define the number of pulses per revolution for the encoder
+PULSES_PER_REV = 560  # Define the number of pulses per revolution for the encoder
 initial_angle_offset = 0.0  # Set initial position angle (e.g., starting at -150°)
 invert_direction = True  # Set to True to invert encoder direction
 prev_position = 0  # Previous encoder position
@@ -119,7 +120,7 @@ def euler2quat(roll, pitch, yaw):
     return r.as_quat()  # Returns [x, y, z, w] quaternion
 
 # Initialize the Madgwick filter and variables
-madgwick = Madgwick(beta=0.2)
+madgwick = Madgwick(beta=0.4)
 q = np.array([1.0, 0.0, 0.0, 0.0])
 init_rot = True
 initial_angle_offset = None  # This will be set after 5 seconds
@@ -172,17 +173,18 @@ def data_thread(sock, data_queue, acc_misalignment, acc_scale, acc_bias, gyro_mi
                         pitch = np.degrees(pitch)
                         roll = np.degrees(roll)
                         rate2 = rate2 + 1
-                        # if rate2 == 20:
+                        if rate2 == 10:
+                            data_queue.put(q)
+
                         #     print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
                         #     print(f"Quaternion: {q}")
-                        #     rate2 = 0
+                            rate2 = 0
                         # Check if 5 seconds have passed since the start of the thread
-                        if initial_angle_offset is None and (time.time() - start_time) >= 5:
+                        if initial_angle_offset is None and (time.time() - start_time) >= 4:
                             yaw_angle = np.arctan2(2.0 * (q[1] * q[2] + q[0] * q[3]), q[0]**2 + q[1]**2 - q[2]**2 - q[3]**2)
                             initial_angle_offset = np.degrees(yaw_angle)
                             print(f"Initial angle offset set to: {initial_angle_offset} degrees")
 
-                        data_queue.put(q)
         except Exception as e:
             print("Exception in data_thread:", e)
             traceback.print_exc()
@@ -275,56 +277,80 @@ def error_thread(data_queue, encoder_queue, plot_queue):
         print("Exception in error_thread:", e)
         traceback.print_exc()
         
-# Function to handle real-time plotting (must be run in the main thread)
+
 def plot_thread(plot_queue):
     print("Starting plot_thread...")
 
-    # Lists to store values for plotting
+    # Lists to store values for plotting and CSV writing
     yaw_encoder_vals = []
     yaw_madgwick_vals = []
     yaw_error_vals = []
     time_vals = []
 
-    # Initialize plot
+    # Initialize the CSV file and write headers
+    with open('yaw_data.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Time (s)', 'Encoder (°)', 'Yaw (°)', 'Error (°)'])
+
+    # Initialize the plot for yaw encoder and yaw madgwick
     plt.ion()  # Turn on interactive mode for real-time updates
-    fig, ax = plt.subplots()
-    line1, = ax.plot([], [], label="Yaw Encoder (°)")
-    line2, = ax.plot([], [], label="Yaw Madgwick (°)")
-    line3, = ax.plot([], [], label="Yaw Error (°)")
-    
-    plt.legend()
-    plt.xlabel('Time (s)')
-    plt.ylabel('Degrees (°)')
-    
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+
+    # Plot for yaw encoder and yaw madgwick
+    line1, = ax1.plot([], [], label="Encoder (°)", color="blue")
+    line2, = ax1.plot([], [], label="Yaw (°)", color="green")
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('Degrees (°)')
+    ax1.legend()
+
+    # Plot for error
+    line3, = ax2.plot([], [], label="Yaw Error (°)", color="red")
+    ax2.set_xlabel('Time (s)')
+    ax2.set_ylabel('Degrees (°)')
+    ax2.legend()
+
     start_time = time.time()
+    delay_threshold = 7  # Time to skip data (6 seconds)
 
     while True:
         # Get data from the plot_queue
         if not plot_queue.empty():
             yaw_encoder, yaw_madgwick_deg, error, current_time = plot_queue.get()
 
-            # Update data lists for plotting
+            # Calculate elapsed time
             elapsed_time = current_time - start_time
-            time_vals.append(elapsed_time)
-            yaw_encoder_vals.append(yaw_encoder)
-            yaw_madgwick_vals.append(yaw_madgwick_deg)
-            yaw_error_vals.append(error)
 
-            # Update the plot data
-            line1.set_xdata(time_vals)
-            line1.set_ydata(yaw_encoder_vals)
-            line2.set_xdata(time_vals)
-            line2.set_ydata(yaw_madgwick_vals)
-            line3.set_xdata(time_vals)
-            line3.set_ydata(yaw_error_vals)
+            # Start plotting and saving data only after 6 seconds
+            if elapsed_time > delay_threshold:
+                # Update data lists for plotting and CSV writing
+                time_vals.append(elapsed_time)
+                yaw_encoder_vals.append(yaw_encoder)
+                yaw_madgwick_vals.append(yaw_madgwick_deg)
+                yaw_error_vals.append(error)
 
-            ax.relim()  # Recompute the data limits
-            ax.autoscale_view()  # Rescale the axes based on new data
+                # Write the new row to the CSV file
+                with open('yaw_data3.csv', mode='a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow([elapsed_time, yaw_encoder, yaw_madgwick_deg, error])
 
-            plt.draw()
-            plt.pause(0.01)  # Pause to update the plot
+                # Update the plot data for yaw encoder and yaw madgwick
+                line1.set_xdata(time_vals)
+                line1.set_ydata(yaw_encoder_vals)
+                line2.set_xdata(time_vals)
+                line2.set_ydata(yaw_madgwick_vals)
 
-        
+                # Update the plot data for yaw error
+                line3.set_xdata(time_vals)
+                line3.set_ydata(yaw_error_vals)
+
+                # Adjust axis limits and redraw
+                ax1.relim()
+                ax1.autoscale_view()
+                ax2.relim()
+                ax2.autoscale_view()
+
+                plt.draw()
+                plt.pause(0.01)  # Pause to update the plot
         
 # Main logic to start threads
 if __name__ == "__main__":

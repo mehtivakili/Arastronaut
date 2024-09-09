@@ -9,9 +9,10 @@ from ahrs.filters import Madgwick
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 import traceback
+import csv
 
 # Encoder parameters
-PULSES_PER_REV = 588  # Define the number of pulses per revolution for the encoder
+PULSES_PER_REV = 583  # Define the number of pulses per revolution for the encoder
 initial_angle_offset = 0.0  # Set initial position angle (e.g., starting at -150°)
 invert_direction = True  # Set to True to invert encoder direction
 prev_position = 0  # Previous encoder position
@@ -132,7 +133,8 @@ def data_thread(sock, data_queue, acc_misalignment, acc_scale, acc_bias, gyro_mi
     rate = 0
     rate2 = 0
     global init_rot, initial_angle_offset
-
+    initial_angle_offset_isnot_set = True
+    first_init = True
     while True:
         try:
             data, addr = sock.recvfrom(4096)
@@ -160,6 +162,7 @@ def data_thread(sock, data_queue, acc_misalignment, acc_scale, acc_bias, gyro_mi
                         if init_rot:
                             initial_orientation = initialize_orientation(accel, mag)
                             q = np.array([initial_orientation[3], initial_orientation[0], initial_orientation[1], initial_orientation[2]])
+                            
                             init_rot = False
 
                         q = madgwick.updateMARG(q=q, gyr=gyro, acc=accel, mag=mag)
@@ -171,18 +174,30 @@ def data_thread(sock, data_queue, acc_misalignment, acc_scale, acc_bias, gyro_mi
                         yaw = np.degrees(yaw)
                         pitch = np.degrees(pitch)
                         roll = np.degrees(roll)
+                        
+                        if first_init :
+                            initial_angle_offset = np.degrees(yaw)
+                            first_init = False
+
+                        
                         rate2 = rate2 + 1
-                        # if rate2 == 20:
+                        if rate2 == 20:
+                            data_queue.put(q)
+
                         #     print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
                         #     print(f"Quaternion: {q}")
                         #     rate2 = 0
                         # Check if 5 seconds have passed since the start of the thread
-                        if initial_angle_offset is None and (time.time() - start_time) >= 5:
-                            yaw_angle = np.arctan2(2.0 * (q[1] * q[2] + q[0] * q[3]), q[0]**2 + q[1]**2 - q[2]**2 - q[3]**2)
+                        if initial_angle_offset_isnot_set and (time.time() - start_time) >= 5:
+                            yaw_angle = np.arctan2(2.0 * (q[1] * q[2] + q[0] * q[3]), q[0]**2 + q[1]**2 - q[2]**2 - q[3]**2)  ########  Yaw
+                            # yaw_angle = np.arcsin(-2.0 * (q[1] * q[3] - q[0] * q[2]))  ############  Roll
+                            # yaw_angle = np.arctan2(2.0 * (q[3] * q[2] + q[0] * q[1]), q[0]**2 - q[1]**2 - q[2]**2 + q[3]**2) ########   Pitch
+                          
                             initial_angle_offset = np.degrees(yaw_angle)
                             print(f"Initial angle offset set to: {initial_angle_offset} degrees")
+                            initial_angle_offset_isnot_set = False
 
-                        data_queue.put(q)
+                        # data_queue.put(q)
         except Exception as e:
             print("Exception in data_thread:", e)
             traceback.print_exc()
@@ -212,6 +227,7 @@ def serial_thread(serial_port, encoder_queue):
                     angle, omega = calculate_angle_omega(position, current_time)
                     
                     enc = angle
+                    encoder_queue.put(enc)      
                 #     if angle is not None:
                 #         # Update the last known encoder value
                 #         last_encoder_value = angle
@@ -244,37 +260,121 @@ def angular_difference(angle1, angle2):
         diff += 360
     return diff
 
+# Function to wrap angle in the range -180° to 180°
+def wrap_to_180(angle):
+    # Use modulo to wrap the angle within 360 degrees
+    wrapped_angle = (angle + 180) % 360 - 180
+    return wrapped_angle
+
+
+def quaternion_to_euler(q):
+    """
+    Convert a quaternion to Euler angles (roll, pitch, yaw).
+    
+    Args:
+        q: A quaternion in the form [qw, qx, qy, qz]
+    
+    Returns:
+        A tuple of Euler angles (roll, pitch, yaw) in radians.
+    """
+    qw, qx, qy, qz = q
+    
+    # Roll (x-axis rotation)
+    sinr_cosp = 2 * (qw * qx + qy * qz)
+    cosr_cosp = 1 - 2 * (qx ** 2 + qy ** 2)
+    roll = np.arctan2(sinr_cosp, cosr_cosp)
+    
+    # Pitch (y-axis rotation)
+    sinp = 2 * (qw * qy - qz * qx)
+    if abs(sinp) >= 1:
+        pitch = np.pi / 2 * np.sign(sinp)  # use 90 degrees if out of range
+    else:
+        pitch = np.arcsin(sinp)
+    
+    # Yaw (z-axis rotation)
+    siny_cosp = 2 * (qw * qz + qx * qy)
+    cosy_cosp = 1 - 2 * (qy ** 2 + qz ** 2)
+    yaw = np.arctan2(siny_cosp, cosy_cosp)
+    
+    return roll, pitch, yaw
 
 # Function to collect and compute yaw values in the background thread
-def error_thread(data_queue, encoder_queue, plot_queue):
+def error_thread(data_queue, encoder_queue, plot_queue, csv_file_path):
     print("Starting error_thread...")
-
+    global initial_angle_offset
+    
+    start_time = time.time()
+    delay = 6  # Delay in seconds
+    init = True
+    
+    # Open CSV file for writing
+    file = None
     try:
+        file = open("Yaw Error.csv", mode='w', newline='')  # Open the file for writing
+        writer = csv.writer(file)
+        # Write header with timestamp, encoder data, error, roll, pitch, and yaw
+        writer.writerow(["Timestamp", "Encoder Data", "Error", "Roll (deg)", "Pitch (deg)", "Yaw (deg)"])  
+        file.flush()  # Force write to file
+        
         while True:
             try:
                 # Get data from queues
-                q = data_queue.get()
-                yaw_madgwick = np.arctan2(2.0 * (q[1] * q[2] + q[0] * q[3]), q[0]**2 + q[1]**2 - q[2]**2 - q[3]**2)
-                yaw_madgwick_deg = np.degrees(yaw_madgwick)
+                q = data_queue.get(timeout=0.1)  # Wait for 100ms for new data
 
-                yaw_encoder = encoder_queue.get()
+                # if q is None:
+                #     print("No data in data_queue.")
+                #     continue
+
+                # Calculate roll, pitch, and yaw from quaternion
+                euler_angles = quaternion_to_euler(q)
+                roll, pitch, yaw = euler_angles
+                
+                # Convert angles to degrees
+                roll = np.degrees(roll)
+                pitch = np.degrees(pitch)
+                yaw = np.degrees(yaw)
+
+                # Get encoder data
+                yaw_encoder = encoder_queue.get(timeout=0.2)
+
+                if yaw_encoder is None:
+                    # print("No data in encoder_queue.")
+                    continue
 
                 # Calculate yaw error
-                error = angular_difference(yaw_madgwick_deg, yaw_encoder)
+                error = angular_difference(yaw, yaw_encoder)
 
-                # Print values
-                print(f"YEncoder: {yaw_encoder:.2f}° aw: {yaw_madgwick_deg:.2f}° Yaw error: {error:.2f}°")
+                current_time = time.time()  # Get current time
 
-                # # Put data into the plot queue for plotting in the main thread
-                plot_queue.put((yaw_encoder, yaw_madgwick_deg, error, time.time()))
+                # Skip initial condition where encoder is zero
+                if yaw_encoder != 0:
+                    init = False
+
+                if yaw_encoder == 0 and init:
+                    yaw_encoder = initial_angle_offset
+
+                # Every 100 ms, write the data to CSV
+                timestamp = current_time - start_time
+                writer.writerow([timestamp, yaw_encoder, error, roll, pitch, yaw])  # Write data row
+                file.flush()  # Force write to file to ensure it's not being buffered
+
+                print(f"Written to CSV - Timestamp: {timestamp:.2f}s, Encoder: {yaw_encoder:.2f}°, Error: {error:.2f}°, Roll: {roll:.2f}°, Pitch: {pitch:.2f}°, Yaw: {yaw:.2f}°")
                 
-                time.sleep(0.01)  # Sleep for a second before the next update
+                # time.sleep(0.1)  # Sleep for 100ms (10Hz)
+
             except queue.Empty:
-                pass
+                # print("Queue is empty.")
+                pass  # Continue if the queue is empty
+
     except Exception as e:
         print("Exception in error_thread:", e)
         traceback.print_exc()
-        
+    
+    finally:
+        # Ensure the file is closed properly
+        if file is not None:
+            file.close()
+            print("CSV file closed properly.")        
 # Function to handle real-time plotting (must be run in the main thread)
 def plot_thread(plot_queue):
     print("Starting plot_thread...")
@@ -287,42 +387,69 @@ def plot_thread(plot_queue):
 
     # Initialize plot
     plt.ion()  # Turn on interactive mode for real-time updates
-    fig, ax = plt.subplots()
-    line1, = ax.plot([], [], label="Yaw Encoder (°)")
-    line2, = ax.plot([], [], label="Yaw Madgwick (°)")
-    line3, = ax.plot([], [], label="Yaw Error (°)")
+    fig, (ax1, ax2) = plt.subplots(2, 1)  # Two subplots: ax1 for yaw, ax2 for error
     
-    plt.legend()
-    plt.xlabel('Time (s)')
-    plt.ylabel('Degrees (°)')
+    # Plot for Yaw Encoder and Madgwick
+    line1, = ax1.plot([], [], label="Yaw Encoder (°)", color='blue')
+    line2, = ax1.plot([], [], label="Yaw Madgwick (°)", color='green')
+    ax1.legend()
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('Degrees (°)')
     
+    # Plot for Yaw Error
+    line3, = ax2.plot([], [], label="Yaw Error (°)", color='red')
+    ax2.legend()
+    ax2.set_xlabel('Time (s)')
+    ax2.set_ylabel('Error (°)')
+    
+    # Text placeholders for displaying values
+    yaw_text = ax1.text(0.02, 0.95, '', transform=ax1.transAxes, fontsize=10, verticalalignment='top')
+    error_text = ax2.text(0.02, 0.95, '', transform=ax2.transAxes, fontsize=10, verticalalignment='top')
+
     start_time = time.time()
-
+    plot_delay = 6  # Delay in seconds
+    
     while True:
-        # Get data from the plot_queue
-        if not plot_queue.empty():
-            yaw_encoder, yaw_madgwick_deg, error, current_time = plot_queue.get()
+        # Get the current time to check if the plot should start
+        current_time = time.time()
 
-            # Update data lists for plotting
-            elapsed_time = current_time - start_time
-            time_vals.append(elapsed_time)
-            yaw_encoder_vals.append(yaw_encoder)
-            yaw_madgwick_vals.append(yaw_madgwick_deg)
-            yaw_error_vals.append(error)
+        # Check if 6 seconds have passed
+        if current_time - start_time >= plot_delay:
+            # Get data from the plot_queue
+            # Get data from the plot_queue
+            if not plot_queue.empty():
+                yaw_encoder, yaw_madgwick_deg, error, current_time = plot_queue.get()
 
-            # Update the plot data
-            line1.set_xdata(time_vals)
-            line1.set_ydata(yaw_encoder_vals)
-            line2.set_xdata(time_vals)
-            line2.set_ydata(yaw_madgwick_vals)
-            line3.set_xdata(time_vals)
-            line3.set_ydata(yaw_error_vals)
+                # Update data lists for plotting
+                elapsed_time = current_time - start_time
+                time_vals.append(elapsed_time)
+                yaw_encoder_vals.append(yaw_encoder)
+                yaw_madgwick_vals.append(yaw_madgwick_deg)
+                yaw_error_vals.append(error)
 
-            ax.relim()  # Recompute the data limits
-            ax.autoscale_view()  # Rescale the axes based on new data
+                # Update the plot data for Yaw Encoder and Madgwick
+                line1.set_xdata(time_vals)
+                line1.set_ydata(yaw_encoder_vals)
+                line2.set_xdata(time_vals)
+                line2.set_ydata(yaw_madgwick_vals)
 
-            plt.draw()
-            plt.pause(0.01)  # Pause to update the plot
+                # Update the plot data for Yaw Error
+                line3.set_xdata(time_vals)
+                line3.set_ydata(yaw_error_vals)
+
+                # Update the text on the plot with the latest values
+                yaw_text.set_text(f'Yaw Encoder: {yaw_encoder:.2f}°, Yaw Madgwick: {yaw_madgwick_deg:.2f}°')
+                error_text.set_text(f'Yaw Error: {error:.2f}°')
+
+                # Recompute limits and rescale
+                ax1.relim()  
+                ax1.autoscale_view()  
+                ax2.relim()  
+                ax2.autoscale_view()
+
+                # Draw the updated plot
+                plt.draw()
+                plt.pause(0.01)  # Pause to update the plot
 
         
         
@@ -344,7 +471,10 @@ if __name__ == "__main__":
     gyro_misalignment, gyro_scale, gyro_bias = load_calibration('./main server GUI/calib_data/test_imu_gyro.calib')
     mag_offsets = np.array([86.0, 141.0, -105.0])
     mag_scales = np.array([2284.0, 2332.0, 2312.0])
-
+    
+    # Define the path where you want to save the CSV file
+    csv_file_path = "output.csv"
+    
     # Queues for passing data
     data_queue = queue.Queue()
     encoder_queue = queue.Queue()
@@ -359,7 +489,7 @@ if __name__ == "__main__":
     serial_thread.daemon = True
     serial_thread.start()
 
-    error_thread = threading.Thread(target=error_thread, args=(data_queue, encoder_queue, plot_queue))
+    error_thread = threading.Thread(target=error_thread, args=(data_queue, encoder_queue, plot_queue, csv_file_path))
     error_thread.daemon = True
     error_thread.start()
     
