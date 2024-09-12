@@ -92,10 +92,47 @@ def apply_calibration(accel, gyro, acc_misalignment, acc_scale, acc_bias, gyro_m
     
     return accel_calibrated, gyro_calibrated
 
-# Function to calibrate magnetometer data
-def calibrate_data(data, offsets, scales):
-    # Subtract the offsets and divide by the scales to normalize the data
-    return (data - offsets) / scales
+import numpy as np
+
+# Function to calibrate and scale magnetometer data
+def calibrate_data(data, offsets, scales, scale_factors=None):
+    """
+    Calibrates the magnetometer data using the provided offsets (hard iron correction)
+    and scales (soft iron correction matrix), and optionally applies user-provided scaling factors.
+
+    :param data: Raw magnetometer data (numpy array [magX, magY, magZ] or Nx3 matrix)
+    :param offsets: Hard iron correction bias (numpy array [offsetX, offsetY, offsetZ])
+    :param scales: Soft iron correction matrix (3x3 numpy array)
+    :param scale_factors: Optional scaling factors (numpy array [scaleX, scaleY, scaleZ]), default: None
+    :return: Calibrated (and optionally scaled) magnetometer data (numpy array [magX_cal, magY_cal, magZ_cal])
+    """
+    # Ensure data is a 2D array (Nx3) even if a single row is provided
+    # if data.ndim == 1:
+    #     data = data.reshape(1, -1)
+    
+    # # Check for valid input shapes
+    # assert data.shape[1] == 3, "Data should have 3 columns representing X, Y, Z."
+    # assert offsets.shape == (3,), "Offsets should be a 1D array of size 3."
+    # assert scales.shape == (3, 3), "Scales should be a 3x3 matrix."
+    
+    # Subtract the hard iron correction (offsets)
+    data_corrected = data - offsets
+
+    # Apply the soft iron correction matrix (scales)
+    calibrated_data = np.dot(data_corrected, scales)
+
+    # Apply provided scaling factors if available
+    if scale_factors is not None:
+        assert scale_factors.shape == (3,), "Scaling factors should be a 1D array of size 3."
+        calibrated_data /= scale_factors
+
+    return calibrated_data
+
+
+# # Function to calibrate magnetometer data
+# def calibrate_data(data, offsets, scales):
+#     # Subtract the offsets and divide by the scales to normalize the data
+#     return (data - offsets) / scales
 
 
 def euler2quat(roll, pitch, yaw):
@@ -185,7 +222,7 @@ def data_thread(sock, data_queue, acc_misalignment, acc_scale, acc_bias, gyro_mi
                         accel, gyro = apply_calibration(accel, gyro, acc_misalignment, acc_scale, acc_bias, gyro_misalignment, gyro_scale, gyro_bias)
 
                         # Calibrate magnetometer data
-                        mag = calibrate_data(mag, mag_offsets, mag_scales)
+                        # mag = calibrate_data(mag, mag_offsets, mag_scales, scale_factors=scale_factors)
 
                         if (init_rot == True):
                             # Initialize the orientation using accelerometer and magnetometer
@@ -222,7 +259,7 @@ def data_thread(sock, data_queue, acc_misalignment, acc_scale, acc_bias, gyro_mi
                             if rate2 == 50:
                                 # print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
                                 # print(f"Quaternion: {q}")
-                                # print(accel, gyro, mag)
+                                print(accel, gyro, mag)
                                 print(yaw/3.14 * 180)
                                 rate2 = 0
 
@@ -318,7 +355,7 @@ def visualization_thread(data_queue):
             roll = np.degrees(roll)   
             rate2 = rate2 + 1
             if rate2 == 2:
-                print(f"Roll: {pitch}, Pitch: {roll}, Yaw: {yaw}")
+                # print(f"Roll: {pitch}, Pitch: {roll}, Yaw: {yaw}")
                 # print(f"Quaternion: {q}")
                 # print(accel, gyro, mag)
                 rate2 = 0
@@ -344,16 +381,24 @@ sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sock.bind((UDP_IP, UDP_PORT))
 
 # Load calibration data for accelerometer and gyroscope
-acc_misalignment, acc_scale, acc_bias = load_calibration('./main server GUI/calib_data/test_imu_acc6G.calib')
-gyro_misalignment, gyro_scale, gyro_bias = load_calibration('./main server GUI/calib_data/test_imu_gyro.calib')
+acc_misalignment, acc_scale, acc_bias = load_calibration('./../Arastronaut/6G 2/test_imu_acc.calib')
+gyro_misalignment, gyro_scale, gyro_bias = load_calibration('./../Arastronaut/6G 2/test_imu_gyro.calib')
 
 # Example calibration offsets and scales for magnetometer
 # mag_offsets = np.array([585.0, 310.0, 40.0])  # Offsets for X, Y, Z axes
-mag_offsets = np.array([86.0, 141.0, -105.0])  # Offsets for X, Y, Z axes
+# mag_offsets = np.array([86.0, 141.0, -105.0])  # Offsets for X, Y, Z axes
 
 # mag_scales = np.array([3000.0, 3000.0, 3000.0])  # Scales for X, Y, Z axes
 # mag_scales = np.array([1142.0, 1166.0, 1156.0])  # Scales for X, Y, Z axes
-mag_scales = np.array([2284.0, 2332.0, 2312.0])  # Scales for X, Y, Z axes
+# mag_scales = np.array([2284.0, 2332.0, 2312.0])  # Scales for X, Y, Z axes
+
+# Define calibration parameters
+mag_offsets = np.array([468.2331, 625.7988, -581.7007])  # Hard iron correction bias
+mag_scales = np.array([[1.0114, -0.0528, -0.0021],        # Soft iron correction matrix
+                       [-0.0528, 0.9903, 0.0199],
+                       [-0.0021, 0.0199, 1.0016]])
+# Define scale factors (from user input)
+scale_factors = np.array([4736, 4369.5, 4273.5])  # Example scaling factors for X, Y, Z axes
 
 # Create a queue to pass data between threads
 data_queue = queue.Queue()
