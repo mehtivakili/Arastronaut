@@ -363,7 +363,7 @@ if __name__ == "__main__":
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((UDP_IP, UDP_PORT))
 
-    serial_port = "COM4"  # Set this to the correct serial port for your encoder
+    serial_port = "COM7"  # Set this to the correct serial port for your encoder
 
     # Load calibration data
     acc_misalignment, acc_scale, acc_bias = load_calibration('./main server GUI/calib_data/test_imu_acc6G.calib')
