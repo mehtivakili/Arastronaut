@@ -367,7 +367,8 @@ void sendIMUTask(void * parameter) {
 
 void sendCompass() {
   compass.read();
-
+  std::vector<uint8_t> bufferedMagData; // Buffer to store the first set of data
+  int64_t elapsedTimeNs = esp_timer_get_time() * 1000;  // Convert microseconds to nanoseconds
   float tio_millis = static_cast<float>(millis());
   Tio = tio_millis / 1000.0;
 
@@ -384,13 +385,16 @@ void sendCompass() {
   // Serial.print(myArray3[3]);
   // Serial.println();
   
-  delay(25);
+  delay(5);
   
   std::vector<uint8_t> magData;
   // Add the MAG separator
   magData.insert(magData.end(), MAG_SEPARATOR, MAG_SEPARATOR + strlen(MAG_SEPARATOR));
 
-  for (int i = 0; i < 4; i++) {
+    // Add the 64-bit timestamp to the data buffer
+    magData.insert(magData.end(), reinterpret_cast<uint8_t*>(&elapsedTimeNs), reinterpret_cast<uint8_t*>(&elapsedTimeNs) + sizeof(int64_t));
+
+  for (int i = 1; i < 4; i++) {
     binaryFloat hi;
     hi.floatingPoint = myArray3[i];
     magData.insert(magData.end(), hi.binary, hi.binary + 4);
@@ -416,6 +420,8 @@ std::vector<uint8_t> bufferedImuMagData; // Buffer to store the first set of dat
 
 void sendIMU_MAG() {
     callCounter++;
+    compass.read();
+
   // int64_t startTime = esp_timer_get_time();  // Start timing
 
   // float tio_millis = static_cast<float>(millis());
@@ -432,6 +438,13 @@ void sendIMU_MAG() {
   myArray4[7] = compass.getX();
   myArray4[8] = compass.getY();
   myArray4[9] = compass.getZ();
+
+  // Serial.print(compass.getX());
+  // Serial.print(", ");
+  // Serial.print(compass.getY());
+  // Serial.print(", ");
+  // Serial.println(compass.getZ());
+
 
   std::vector<uint8_t> imuMag;
 
@@ -503,12 +516,17 @@ void sendIMUMAGTask(void * parameter) {
             // bmi.readSensor();
             bmi.getSensorRawValues(&accelX_raw, &accelY_raw, &accelZ_raw, &gyroX_raw, &gyroY_raw, &gyroZ_raw);
 
-
+            // compass.read();
+            // Serial.print(compass.getX());
+            // Serial.print(", ");
+            // Serial.print(compass.getY());
+            // Serial.print(", ");
+            // Serial.println(compass.getZ());
             // Send IMU data
             sendIMU_MAG();
 
             // Optionally, add some delay or task yield if necessary
-            vTaskDelay(2);
+            vTaskDelay(5);
         }
     }
 }
@@ -579,7 +597,7 @@ void setup() {
   // }
 
     /* Start the sensors */
-  status = bmi.begin(Bmi088::ACCEL_RANGE_3G, Bmi088::GYRO_RANGE_500DPS, Bmi088::ODR_1000HZ);
+  status = bmi.begin(Bmi088::ACCEL_RANGE_12G, Bmi088::GYRO_RANGE_1000DPS, Bmi088::ODR_1000HZ);
   if (status < 0) {
     Serial.println("IMU Initialization Error");
     Serial.println(status);
@@ -642,10 +660,10 @@ void setup() {
   // Serial.print("AP IP address: ");
   // Serial.println(AP_IP);
   
-  compass.setMagneticDeclination(54, 58); // Set magnetic declination for your location (degrees, minutes)
+  // compass.setMagneticDeclination(54, 58); // Set magnetic declination for your location (degrees, minutes)
 
   compass.init();
-  compass.setMagneticDeclination(54, 58); // Set magnetic declination for your location (degrees, minutes)
+  // compass.setMagneticDeclination(54, 58); // Set magnetic declination for your location (degrees, minutes)
 
     // Create the task for sending IMU data on Core 1
     // xTaskCreatePinnedToCore(
@@ -738,10 +756,10 @@ void loop() {
         counter2 = 0;
         interrupts();
 
-        Serial.print("Interrupts in last UWB second: ");
-        Serial.println(countInLastSecond);
-        Serial.print("Interrupts in last IMU second: ");
-        Serial.println(countInLastSecond2);
+        // Serial.print("Interrupts in last UWB second: ");
+        // Serial.println(countInLastSecond);
+        // Serial.print("Interrupts in last IMU second: ");
+        // Serial.println(countInLastSecond2);
 
         lastCheckTime = currentTime;
     }
@@ -817,11 +835,40 @@ void loop() {
             break;
 
       case IMU_COMPASS:
+          compass.read();
+
+
+          // int64_t startTime = esp_timer_get_time();  // Start timing
+
+          // float tio_millis = static_cast<float>(millis());
+          // Tio = tio_millis / 1000.0;
+              // Get the elapsed time in nanoseconds
+          // int64_t elapsedTimeNs = esp_timer_get_time() * 1000;  // Convert microseconds to nanoseconds
+          // // myArray4[0] = Tio;
+          // myArray4[1] = accelX_raw;
+          // myArray4[2] = accelY_raw;
+          // myArray4[3] = accelZ_raw;
+          // myArray4[4] = gyroX_raw;
+          // myArray4[5] = gyroY_raw;
+          // myArray4[6] = gyroZ_raw;
+          // myArray4[7] = compass.getX();
+          // myArray4[8] = compass.getY();
+          // myArray4[9] = compass.getZ();
+
+          Serial.print(compass.getX());
+          Serial.print(", ");
+          Serial.print(compass.getY());
+          Serial.print(", ");
+          Serial.println(compass.getZ());
+
+          delay(5);
+
           if (imuReady == 1) {
               imuReady = 0;
               detachInterrupt(digitalPinToInterrupt(34));
+              
               bmi.readSensor();
-              compass.read();
+              // compass.read();
               imuMagDataReadyToSend = true;
               attachInterrupt(digitalPinToInterrupt(34), DW1000Class::handleInterrupt, RISING);
 
