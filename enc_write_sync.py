@@ -2,11 +2,11 @@ import serial
 import time
 
 # Initialize serial communication with the ESP32
-ser = serial.Serial('COM4', 915200)  # Replace with your serial port
+ser = serial.Serial('COM7', 915200)  # Replace with your serial port
 ser.flushInput()
 
 # Constants
-PULSES_PER_REV = 583  # Encoder has 600 pulses per 360° rotation
+PULSES_PER_REV = 600  # Encoder has 600 pulses per 360° rotation
 
 # Variables to store previous position and time for omega (angular velocity) calculation
 prev_position = None
@@ -17,7 +17,7 @@ prev_angle = None
 log_file = "encoder_data.csv"
 
 # Set initial angle (hard-coded) and starting position
-initial_angle_offset = 168.0  # Set initial position angle (e.g., starting at -150°)
+initial_angle_offset = 57.0 # Set initial position angle (e.g., starting at -150°)
 starting_position = 0  # Initial encoder position, change if necessary
 
 # Invert direction of encoder (True = invert, False = no inversion)
@@ -143,7 +143,7 @@ def read_encoder_data():
                     file.write(f"{current_time},{last_angle:.2f}\n")
 
                 # Print the data that was written
-                print(f"Written to CSV - Timestamp: {current_time}, Position: {last_position}, Angle: {last_angle:.2f}, Omega: {omega:.2f}")
+                # print(f"Written to CSV - Timestamp: {current_time}, Position: {last_position}, Angle: {last_angle:.2f}, Omega: {omega:.2f}")
                 
                 last_write_time = current_time  # Reset the last write time
 
