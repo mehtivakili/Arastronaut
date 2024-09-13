@@ -290,7 +290,7 @@ def data_thread(sock, data_queue, acc_misalignment, acc_scale, acc_bias, gyro_mi
                             # roll = np.degrees(roll)
                             yaw = np.arctan2(-mag[1], mag[0])  # Yaw angle (heading) from magnetometer
                             rate2 = rate2 + 1
-                            if rate2 == 50:
+                            if rate2 == 20:
                                 # print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
                                 # print(f"Quaternion: {q}")
                                 # print(accel, gyro, mag)
@@ -366,7 +366,8 @@ def visualization_thread(data_queue):
             # print(f"Quaternion length: {len(q)}")  # This should be 4
             # Rotate cube vertices
             # rotated_vertices = rotate_cube(cube_vertices, roll, pitch, yaw)
-            rotated_vertices = rotate_cube_with_quaternion(cube_vertices, quaternion_multiply(quaternion_inverse(q),q0))
+            # rotated_vertices = rotate_cube_with_quaternion(cube_vertices, quaternion_multiply(quaternion_inverse(q),q0))
+            rotated_vertices = rotate_cube_with_quaternion(cube_vertices, q)
 
             faces = get_cube_faces(rotated_vertices)
 
@@ -384,7 +385,8 @@ def visualization_thread(data_queue):
             #             # Assuming q is [w, x, y, z] quaternion format
             # pitch = np.arctan2(2.0 euler_angles = quaternion_to_euler(q)
             
-            euler_angles = quaternion_to_euler(quaternion_multiply(quaternion_inverse(q),q0))
+            # euler_angles = quaternion_to_euler(quaternion_multiply(quaternion_inverse(q),q0))
+            euler_angles = quaternion_to_euler(q)
             roll, pitch, yaw = euler_angles 
                     
             # # Convert to degrees
@@ -393,18 +395,18 @@ def visualization_thread(data_queue):
             roll = np.degrees(roll)   
 
 
-            q_test=quaternion_multiply(quaternion_inverse(q),q0)
+            # q_test=quaternion_multiply(quaternion_inverse(q),q0)
 
                 # Define your quaternion (w, x, y, z)
-            q_py = Quaternion(*q_test)  # Example quaternion
+            # q_py = Quaternion(*q_test)  # Example quaternion
 
             # Convert quaternion to Euler angles (roll, pitch, yaw)
-            euler_angles = q_py.yaw_pitch_roll  # This returns yaw, pitch, roll (in radians)
+            # euler_angles = q_py.yaw_pitch_roll  # This returns yaw, pitch, roll (in radians)
 
             # Extract the angles
-            yaw = euler_angles[0]  # Yaw angle (rotation around Z-axis)
-            pitch = euler_angles[1]  # Pitch angle (rotation around Y-axis)
-            roll = euler_angles[2]  # Roll angle (rotation around X-axis)
+            # yaw = euler_angles[0]  # Yaw angle (rotation around Z-axis)
+            # pitch = euler_angles[1]  # Pitch angle (rotation around Y-axis)
+            # roll = euler_angles[2]  # Roll angle (rotation around X-axis)
 
             # Optionally, convert radians to degrees
             yaw_deg = np.degrees(yaw)

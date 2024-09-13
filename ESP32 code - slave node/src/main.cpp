@@ -12,6 +12,37 @@
 #include "QMC5883LCompass.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "MPU9250.h"
+
+// Custom class to extend the MPU9250 library and provide raw data getters
+class MPU9250Extended : public MPU9250 {
+public:
+  MPU9250Extended(TwoWire &bus, uint8_t address) : MPU9250(bus, address) {}
+
+  int16_t getAccelXRaw() { return _axcounts; }
+  int16_t getAccelYRaw() { return _aycounts; }
+  int16_t getAccelZRaw() { return _azcounts; }
+
+  int16_t getGyroXRaw() { return _gxcounts; }
+  int16_t getGyroYRaw() { return _gycounts; }
+  int16_t getGyroZRaw() { return _gzcounts; }
+
+  int16_t getMagXRaw() { return _hxcounts; }
+  int16_t getMagYRaw() { return _hycounts; }
+  int16_t getMagZRaw() { return _hzcounts; }
+
+  int16_t getTemperatureRaw() { return _tcounts; }
+};
+
+// MPU9250 sensor object, using I2C bus with address 0x68
+MPU9250Extended IMU(Wire, 0x68);
+
+// Variables to store raw sensor data
+int16_t accelXRaw, accelYRaw, accelZRaw;
+int16_t gyroXRaw, gyroYRaw, gyroZRaw;
+int16_t magXRaw, magYRaw, magZRaw;
+int16_t tempRaw;
+int status;
 
 // Task handle
 TaskHandle_t sendIMUTaskHandle = NULL;
@@ -429,15 +460,15 @@ void sendIMU_MAG() {
       // Get the elapsed time in nanoseconds
   int64_t elapsedTimeNs = esp_timer_get_time() * 1000;  // Convert microseconds to nanoseconds
   // myArray4[0] = Tio;
-  myArray4[1] = accelX_raw;
-  myArray4[2] = accelY_raw;
-  myArray4[3] = accelZ_raw;
-  myArray4[4] = gyroX_raw;
-  myArray4[5] = gyroY_raw;
-  myArray4[6] = gyroZ_raw;
-  myArray4[7] = compass.getX();
-  myArray4[8] = compass.getY();
-  myArray4[9] = compass.getZ();
+  myArray4[1] = accelXRaw;
+  myArray4[2] = accelYRaw;
+  myArray4[3] = accelZRaw;
+  myArray4[4] = gyroXRaw;
+  myArray4[5] = gyroYRaw;
+  myArray4[6] = gyroZRaw;
+  myArray4[7] = magXRaw;
+  myArray4[8] = magYRaw;
+  myArray4[9] = magZRaw;
 
   // Serial.print(compass.getX());
   // Serial.print(", ");
@@ -596,6 +627,20 @@ void setup() {
   //   while (1);
   // }
 
+    while (!Serial) {}
+  status = IMU.begin();
+  // Initialize the IMU
+  if (status < 0) {
+    Serial.print("IMU initialization failed. status = ");
+    Serial.println(status);
+    while (1);
+  }
+
+  IMU.setAccelRange(MPU9250::ACCEL_RANGE_4G);
+  IMU.setGyroRange(MPU9250::GYRO_RANGE_1000DPS);
+  IMU.setDlpfBandwidth(MPU9250::DLPF_BANDWIDTH_92HZ);
+  IMU.setSrd(9); // Set sample rate divider to 19 for 50 Hz output data rate
+
     /* Start the sensors */
   status = bmi.begin(Bmi088::ACCEL_RANGE_12G, Bmi088::GYRO_RANGE_1000DPS, Bmi088::ODR_1000HZ);
   if (status < 0) {
@@ -746,6 +791,22 @@ void loop() {
 
     unsigned long currentTime = millis();
 
+    // Read sensor data
+    IMU.readSensor();
+
+    // Extract raw data directly
+    accelXRaw = IMU.getAccelXRaw();
+    accelYRaw = IMU.getAccelYRaw();
+    accelZRaw = IMU.getAccelZRaw();
+    
+    gyroXRaw = IMU.getGyroXRaw();
+    gyroYRaw = IMU.getGyroYRaw();
+    gyroZRaw = IMU.getGyroZRaw();
+
+    magXRaw = IMU.getMagXRaw();
+    magYRaw = IMU.getMagYRaw();
+    magZRaw = IMU.getMagZRaw();
+
     // Check if 1 second has passed
     if (currentTime - lastCheckTime >= 1000) {
         // Disable interrupts while reading shared variable
@@ -855,11 +916,11 @@ void loop() {
           // myArray4[8] = compass.getY();
           // myArray4[9] = compass.getZ();
 
-          Serial.print(compass.getX());
-          Serial.print(", ");
-          Serial.print(compass.getY());
-          Serial.print(", ");
-          Serial.println(compass.getZ());
+          // Serial.print(compass.getX());
+          // Serial.print(", ");
+          // Serial.print(compass.getY());
+          // Serial.print(", ");
+          // Serial.println(compass.getZ());
 
           delay(5);
 
