@@ -2,11 +2,11 @@ import serial
 import time
 
 # Initialize serial communication with the ESP32
-ser = serial.Serial('COM7', 915200)  # Replace with your serial port
+ser = serial.Serial('COM7', 115200)  # Replace with your serial port
 ser.flushInput()
 
 # Constants
-PULSES_PER_REV = 597  # Encoder has 600 pulses per 360° rotation
+PULSES_PER_REV = 600  # Encoder has 600 pulses per 360° rotation
 
 # Define buffer size
 BUFFER_SIZE = 1024
@@ -17,11 +17,11 @@ prev_time = None
 prev_angle = None
 
 # Set initial angle (hard-coded) and starting position
-initial_angle_offset = 156  # Set initial position angle (e.g., starting at -150°)
+initial_angle_offset = 0  # Set initial position angle (e.g., starting at -150°)
 starting_position = 0  # Initial encoder position, change if necessary
 
 # Invert direction of encoder (True = invert, False = no inversion)
-invert_direction = False # Set to True to invert encoder direction
+invert_direction = True # Set to True to invert encoder direction
 
 # Flag to indicate whether the first data point has been processed
 first_data_point = True  # Initially set to True
