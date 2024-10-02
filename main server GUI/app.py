@@ -261,7 +261,7 @@ def data_acquisition():
 
                 # Send the GET request within the POST request handler
         try:
-            response = requests.get('http://192.168.4.1/mode?mode=6')
+            response = requests.get('http://192.168.4.1/mode?mode=5')
             if response.status_code == 200:
                 print("GET request successful")
             else:
@@ -520,7 +520,7 @@ def imu_calib():
 
                 # Send the GET request within the POST request handler
         try:
-            response = requests.get('http://192.168.4.1/mode?mode=0')
+            response = requests.get('http://192.168.4.1/mode?mode=5')
             if response.status_code == 200:
                 print("GET request successful")
             else:
@@ -529,8 +529,8 @@ def imu_calib():
             print(f"Error during GET request: {e}")
 
         MODE = "imu_tk"
-        byteData = 32
-        check = "abc/"
+        byteData = 44
+        check = "img/"
         udp_thread2 = start_udp_thread(read_serial_data, udp_thread2_stop_event)
         print("IMU calib thread started")
 
@@ -1315,7 +1315,7 @@ def read_serial_data(stop_event):
                     # print(Tio)
                     if(byteData == 44):
                         mag = numbers[7:9]
-                        print(mag)
+                        # print(mag)
                     final_time2 = (Tio *  1000000000) + current_time_ns2
 
                     # print (f"Tio: {Tio:.3f}, Accel: {accel}, Gyro: {gyro}")
