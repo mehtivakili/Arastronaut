@@ -1,8 +1,8 @@
-# IMU and Encoder Calibration Guide
+# IMU and Encoder Verification Guide
 
 This calibration process aligns IMU orientation data with encoder measurements by adjusting the angle offset. Follow these steps to ensure accurate synchronization:
 
-1. **Run Calibration Tools**: Execute `imu_orient.py` and `enc_final2.py` simultaneously to adjust the angle offset between the IMU and encoder.
+1. **Run Verification Tools**: Execute `imu_orient.py` and `enc_final2.py` simultaneously to adjust the angle offset between the IMU and encoder.
 
 2. **Data Collection**: Perform calibration movements to gather synchronized datasets from both devices.
 
