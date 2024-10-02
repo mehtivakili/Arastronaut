@@ -2,7 +2,7 @@
 
 This project verifies the alignment between IMU orientation data and encoder measurements using the **Angle Axis Screw Method**. By running `imu_orient.py` and `enc_final2.py` concurrently, synchronized datasets are collected during **10 full rotations (360 degrees)**. After verification, execute `plot_dataset_err.py` to compute the **Root Mean Squared Error (RMSE)** and visualize the discrepancies between the IMU and encoder.
 
-![Absolute Error Plot](plots/absolute_error_plot.png)
+![Absolute Error Plot](Plots/combined_plots.png)
 
 ## Verification Process
 
@@ -30,13 +30,11 @@ The **Angle Axis Screw Method** mathematically aligns rotational data by determi
 - **Minimizing Error**: Utilizing optimization techniques to minimize the discrepancy, quantified by RMSE.
 
 **Mathematical Representation**:
-\[
-\text{RMSE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (\theta_{\text{Encoder},i} - \theta_{\text{IMU},i})^2}
-\]
+
 Where:
-- \(\theta_{\text{Encoder},i}\) is the angle measured by the encoder at the \(i^{th}\) timestamp.
-- \(\theta_{\text{IMU},i}\) is the angle measured by the IMU at the \(i^{th}\) timestamp.
-- \(n\) is the total number of measurements.
+theta_encoder is the angle measured by the encoder at the T timestamp.
+theta_imu is the angle measured by the IMU at the i^theta timestamp.
+n is the total number of measurements.
 
 ## Uploading the Plot Image
 
