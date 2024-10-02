@@ -12,7 +12,7 @@ import traceback
 import csv
 
 # Encoder parameters
-PULSES_PER_REV = 560  # Define the number of pulses per revolution for the encoder
+PULSES_PER_REV = 600  # Define the number of pulses per revolution for the encoder
 initial_angle_offset = 0.0  # Set initial position angle (e.g., starting at -150°)
 invert_direction = True  # Set to True to invert encoder direction
 prev_position = 0  # Previous encoder position
@@ -120,7 +120,7 @@ def euler2quat(roll, pitch, yaw):
     return r.as_quat()  # Returns [x, y, z, w] quaternion
 
 # Initialize the Madgwick filter and variables
-madgwick = Madgwick(beta=0.4)
+madgwick = Madgwick(beta=0.6)
 q = np.array([1.0, 0.0, 0.0, 0.0])
 init_rot = True
 initial_angle_offset = None  # This will be set after 5 seconds
@@ -173,14 +173,14 @@ def data_thread(sock, data_queue, acc_misalignment, acc_scale, acc_bias, gyro_mi
                         pitch = np.degrees(pitch)
                         roll = np.degrees(roll)
                         rate2 = rate2 + 1
-                        if rate2 == 10:
+                        if rate2 == 1:
                             data_queue.put(q)
 
-                        #     print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
+                            # print(f"Roll: {roll}, Pitch: {pitch}, Yaw: {yaw}")
                         #     print(f"Quaternion: {q}")
                             rate2 = 0
                         # Check if 5 seconds have passed since the start of the thread
-                        if initial_angle_offset is None and (time.time() - start_time) >= 4:
+                        if initial_angle_offset is None and (time.time() - start_time) >= 1:
                             yaw_angle = np.arctan2(2.0 * (q[1] * q[2] + q[0] * q[3]), q[0]**2 + q[1]**2 - q[2]**2 - q[3]**2)
                             initial_angle_offset = np.degrees(yaw_angle)
                             print(f"Initial angle offset set to: {initial_angle_offset} degrees")
@@ -197,11 +197,11 @@ def serial_thread(serial_port, encoder_queue):
     start_time = time.time()
     print("Starting serial_thread...")
     try:
-        ser = serial.Serial(serial_port, 915200, timeout=0.5)
+        ser = serial.Serial(serial_port, 115200, timeout=0.5)
         while True:
             encoder_queue.put(enc)
             # print(initial_angle_offset)
-            if (time.time() - start_time) >= 6:
+            if (time.time() - start_time) >= 1:
                 calculate_angle_omega(0,0)
                 # print("done")
                 # print(time.time())
@@ -225,8 +225,8 @@ def serial_thread(serial_port, encoder_queue):
                 #     if last_encoder_value is not None:
                 #         encoder_queue.put(last_encoder_value)
                     # print(angle)
-                    # encoder_queue.put(angle)
-                # time.sleep(0.1)
+                    encoder_queue.put(angle)
+                time.sleep(0.1)
 
             except serial.SerialException as e:
                 print("Serial read error!", e)
@@ -246,6 +246,7 @@ def angular_difference(angle1, angle2):
         diff += 360
     return diff
 
+yaw_encoder = 0
 
 # Function to collect and compute yaw values in the background thread
 def error_thread(data_queue, encoder_queue, plot_queue):
@@ -262,13 +263,19 @@ def error_thread(data_queue, encoder_queue, plot_queue):
                 yaw_encoder = encoder_queue.get()
 
                 # Calculate yaw error
-                error = angular_difference(yaw_madgwick_deg, yaw_encoder)
+                # Inside error_thread before calling angular_difference
+                if yaw_madgwick_deg is not None and yaw_encoder is not None:
+                    error = angular_difference(yaw_madgwick_deg, yaw_encoder)
+                else:
+                    error = None
+                    print("Skipping error calculation due to None values.")
+
 
                 # Print values
-                print(f"YEncoder: {yaw_encoder:.2f}° aw: {yaw_madgwick_deg:.2f}° Yaw error: {error:.2f}°")
+                print(f"Encoder: {yaw_encoder:.2f}° Yaw: {yaw_madgwick_deg:.2f}° Yaw error: {error:.2f}°")
 
                 # # Put data into the plot queue for plotting in the main thread
-                plot_queue.put((yaw_encoder, yaw_madgwick_deg, error, time.time()))
+                # plot_queue.put((yaw_encoder, yaw_madgwick_deg, error, time.time()))
                 
                 time.sleep(0.01)  # Sleep for a second before the next update
             except queue.Empty:
@@ -310,7 +317,7 @@ def plot_thread(plot_queue):
     ax2.legend()
 
     start_time = time.time()
-    delay_threshold = 7  # Time to skip data (6 seconds)
+    delay_threshold = 0  # Time to skip data (6 seconds)
 
     while True:
         # Get data from the plot_queue
@@ -338,6 +345,7 @@ def plot_thread(plot_queue):
                 line1.set_ydata(yaw_encoder_vals)
                 line2.set_xdata(time_vals)
                 line2.set_ydata(yaw_madgwick_vals)
+                print()
 
                 # Update the plot data for yaw error
                 line3.set_xdata(time_vals)
@@ -368,8 +376,17 @@ if __name__ == "__main__":
     # Load calibration data
     acc_misalignment, acc_scale, acc_bias = load_calibration('./main server GUI/calib_data/test_imu_acc6G.calib')
     gyro_misalignment, gyro_scale, gyro_bias = load_calibration('./main server GUI/calib_data/test_imu_gyro.calib')
-    mag_offsets = np.array([86.0, 141.0, -105.0])
-    mag_scales = np.array([2284.0, 2332.0, 2312.0])
+
+    ## Fixed the axis issue and mag and imu are aligned
+    mag_offsets = np.array([1463.4, 2316.1, -382.8])  # Hard iron correction bias
+    mag_scales = np.array([[1.0207, 0.00315, 0.0538],        # Soft iron correction matrix
+                        [-0.0315, 0.9730, 0.0980],
+                        [0.0538, 0.0980, 1.0209]])
+    # mag_scales = np.array([[1, 0, 0],
+    #                        [0, 1, 0],
+    #                        [0, 0, 1]])
+    # Define scale factors (from user input)
+    scale_factors = np.array([6759.5, 6077, 5799.5])  # Example scaling factors for X, Y, Z axes
 
     # Queues for passing data
     data_queue = queue.Queue()
@@ -390,10 +407,10 @@ if __name__ == "__main__":
     error_thread.start()
     
     # Start the plot_thread to handle plotting in the main thread
-    plot_thread(plot_queue)
+    # plot_thread(plot_queue)
     
 
     # Keep the main program running
     while True:
-        time.sleep(0.1)
+        time.sleep(0.01)
         # print("yes")
