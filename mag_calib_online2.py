@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation
 import threading
+import time
 
 rate = 0
 
@@ -35,7 +36,7 @@ def remove_outliers_calibrate_and_scale(data):
     
     # Removing outliers
     z_scores = np.abs((data - mean) / std_dev)
-    data_filtered = data[(z_scores < 2).all(axis=1)]
+    data_filtered = data[(z_scores < 5).all(axis=1)]
     
     if len(data_filtered) == 0:
         return np.array([0.0, 0.0, 0.0]), data, np.array([1.0, 1.0, 1.0])
@@ -58,29 +59,52 @@ def remove_outliers_calibrate_and_scale(data):
     
     return offsets, data_corrected, scales
 
+# File for writing data in real-time
+output_file = '204smag_data_fixaxis2.csv'
+header_written = False
+
+# Duration for data collection (in seconds)
+duration = 100
+end_time = time.time() + duration
+
 def receive_udp_data():
     global rate
     print("UDP thread started.")
+    header_written = False
+
     check = "img/"
     check_encoded = check.encode()
+    # Open the file in write mode and start collecting data
+    with open(output_file, 'w') as f:
 
-    while True:
-        data, addr = sock.recvfrom(4096)
+        while time.time() < end_time:
+            data, addr = sock.recvfrom(4096)
+            # print(data)
+            parts = data.split(check_encoded)
+            for part in parts:
+                if len(part) == 44:
+                    rate += 1
+                    values = struct.unpack('<q9f', part)
+                    _, _, _, _, _, _, _, magX, magY, magZ = values
+                    mag = np.array([magX, magY, magZ])
+                    if rate % 2 == 0:
+                        # magX = magX - 406
+                        # magY = magY - 336
+                        # magZ = magZ - 38
+                        # magX = magX - 86
+                        # magY = magY - 141
+                        # magZ = magZ + 105
+                        magnetometer_data.append([magX, magY, magZ])
+                                            # If header is not written, write it once
+                        if not header_written:
+                            f.write("Mag_X,Mag_Y,Mag_Z\n")
+                            header_written = True
 
-        parts = data.split(check_encoded)
-        for part in parts:
-            if len(part) == 44:
-                rate += 1
-                values = struct.unpack('<q9f', part)
-                _, _, _, _, _, _, _, magX, magY, magZ = values
-                if rate % 2 == 0:
-                    # magX = magX - 406
-                    # magY = magY - 336
-                    # magZ = magZ - 38
-                    # magX = magX - 86
-                    # magY = magY - 141
-                    # magZ = magZ + 105
-                    magnetometer_data.append([magX, magY, magZ])
+                        # Write the calibrated data to the CSV file in real-time
+                        f.write(f"{mag[0]},{mag[1]},{mag[2]}\n")
+
+                        print(mag, end_time - time.time())  # For real-time monitoring
+
 
 def update_plot(frame):
     global offsets, magnetometer_data, calibrated_data, scales
