@@ -24,7 +24,7 @@ This repository contains code for collecting and visualizing IMU and gyroscope d
 - 
 ## AHRS quaternion and screw representation
 
-![Demo GIF](assets/screw_representation.gif)
+![Demo GIF](assets/screw_representation_small.gif)
 
 ## Installation
 
