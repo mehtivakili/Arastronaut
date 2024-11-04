@@ -21,6 +21,10 @@ This repository contains code for collecting and visualizing IMU and gyroscope d
 - **Real-Time Plotting**: Visualize the sensor data in real-time using Plotly and Chart.js.
 - **Web Interface**: Control data collection and view plots through a web interface.
 - **Socket.IO Integration**: Stream data to a Node.js server for real-time updates.
+- 
+## AHRS quaternion and screw representation
+
+![Demo GIF](assets/screw_representation.gif)
 
 ## Installation
 
