@@ -42,6 +42,11 @@
 - Python environment (for GUI and data processing).
 
 ### Installation
+
+- **Python** (Version 3.7 or higher recommended)
+- **Node.js** (Latest LTS version recommended)
+- **pip** (Python package installer)
+
 1. **Clone the Repository**:
     ```bash
     git clone https://github.com/mehtivakili/Arastronaut.git
@@ -52,12 +57,28 @@
     ```bash
     pip install -r requirements.txt
     ```
+3. **Run the Node.js Server**
+  Start the Node.js server:
+    ```bash
+    node server.js
+    ```
 
-3. **Flash Firmware**:
+4. **Run the Python Application**
+  In a new terminal, launch the Python application:
+
+  ```bash
+  python3 app.py
+  ```
+
+5. **Flash Firmware**:
     - Connect the ESP32 to your computer.
     - Use the GUI or ESP32 flashing tools to upload the firmware.
 
-4. **Setup Anchors and Tags**:
+6. **Calibration IMU, Magnetometer and UWB**:
+    - Calibration of IMU & Mag from the panel following the instructions
+    - Evaluating the IMU & Mag data from the panel
+    - 
+7. **Setup Anchors and Tags**:
     - Configure anchor positions and assign unique IDs.
     - Define the number of anchors needed based on your environment.
 
