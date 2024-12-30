@@ -9,7 +9,7 @@
 
 // Connection pins
 const uint8_t PIN_RST = 27; // Reset pin
-const uint8_t PIN_IRQ = 35; // IRQ pin (must be interrupt-capable)
+const uint8_t PIN_IRQ = 34; // IRQ pin (must be interrupt-capable)
 const uint8_t PIN_SS = 5;   // SPI select pin
 
 // Device address (unique 16-bit address)

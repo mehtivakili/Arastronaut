@@ -16,7 +16,7 @@ prev_time = None
 prev_angle = None
 
 # Set initial angle (hard-coded) and starting position
-initial_angle_offset = 4 # Set initial position angle (e.g., starting at -150°)
+initial_angle_offset = 0 # Set initial position angle (e.g., starting at -150°)
 invert_direction = True  # Set to True to invert encoder direction
 
 # Flag to indicate first data point processing
@@ -72,7 +72,7 @@ def read_encoder_data():
     buffer = bytearray()
 
     # Open a CSV file to save the encoder data
-    with open('dataset-encoder2.csv', 'w', newline='') as csvfile:
+    with open('dataset-encoder20.csv', 'w', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
         # Write the header
         csvwriter.writerow(['timestamp_ns', 'angle_deg'])

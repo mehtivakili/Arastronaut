@@ -384,7 +384,7 @@ plt.scatter(
     average_distances_df['Ground_Truth_Distance (m)'],
     color='red',
     marker='o',
-    s=100,  # Increased size for better visibility
+    s=200,  # Increased size for better visibility
     alpha=0.7,
     label='Data Points'
 )
@@ -403,23 +403,32 @@ plt.plot(
     linear_fit_scatter,
     linestyle='-',
     color='purple',
-    label=f'UWB Measurement Model\n$y = {slope_scatter:.4f}x + {intercept_scatter:.4f}$'
+    label=f'UWB Measurement Model\n$y = {slope_scatter:.4f}x {intercept_scatter:.4f}$'
+)
+
+# Plot y = x line (identity line)
+plt.plot(
+    [min(average_distances_df['Average_Distance (m)']), max(average_distances_df['Average_Distance (m)'])],
+    [min(average_distances_df['Average_Distance (m)']), max(average_distances_df['Average_Distance (m)'])],
+    linestyle='--',
+    color='black',
+    label='y = x'
 )
 
 # Add labels and title with increased font sizes
-plt.xlabel('Measured Distance (m) [UWB Measurement]', fontsize=24)
-plt.ylabel('Ground Truth Distance (m)', fontsize=24)
-plt.title('UWB Measurement vs Ground Truth Distance', fontsize=28)
+plt.xlabel('Measured Distance (m) [UWB Measurement]', fontsize=34)
+plt.ylabel('Ground Truth Distance (m)', fontsize=34)
+plt.title('UWB Measurement vs Ground Truth Distance', fontsize=40)
 
 # Customize tick labels with increased font sizes
-plt.xticks(fontsize=20)
-plt.yticks(fontsize=20)
+plt.xticks(fontsize=24)
+plt.yticks(fontsize=24)
 
 # Add grid
 plt.grid(True, which='both', linestyle='--', linewidth=0.5)
 
 # Add legend with increased font size
-plt.legend(fontsize=20)
+plt.legend(fontsize=28)
 
 plt.tight_layout()
 

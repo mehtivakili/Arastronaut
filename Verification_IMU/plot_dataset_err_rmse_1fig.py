@@ -8,7 +8,7 @@ def main():
     # ----------------------------- Step 1: Define File Paths ----------------------------- #
 
     # Input file paths (modify these if your files have different names or locations)
-    encoder_file = 'dataset-encoder2.csv'
+    encoder_file = 'dataset-encoder3.csv'
     screw_axis_file = 'dataset-screw3.csv'
 
     # Output file paths

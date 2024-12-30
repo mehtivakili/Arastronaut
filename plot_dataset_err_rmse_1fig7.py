@@ -13,7 +13,7 @@ def main():
 
     # Output file paths
     rmse_output_file = 'rmse_output.txt'  # File to log RMSE value
-    plot_output_file = 'imu_screw_angle_verification.svg'  # SVG output
+    plot_output_file = 'imu_screw_angle_verification.pdf'  # SVG output
 
     # ----------------------------- Step 2: Set Maximum Time Range in Seconds ----------------------------- #
 
@@ -155,8 +155,8 @@ def main():
     plt.grid(True)
 
     # Save the plot as an SVG file
-    plt.savefig(plot_output_file, format='svg')
-    print(f"✅ Plot saved as SVG at '{plot_output_file}'")
+    plt.savefig(plot_output_file, format='pdf')
+    print(f"✅ Plot saved as PDF at '{plot_output_file}'")
 
     # Display the plot
     plt.show()
