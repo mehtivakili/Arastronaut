@@ -1,6 +1,6 @@
 # Arastronaut: Open-Source Indoor Positioning Platform
 
-![Arastronaut Logo](#) <!-- Placeholder for Image 1 -->
+![Arastronaut Logo](https://github.com/mehtivakili/Arastronaut/blob/main/assets/menu_page-0001%20(Small).jpg) <!-- Placeholder for Image 1 -->
 
 **Arastronaut** is a cutting-edge open-source platform that combines hardware and software to deliver high-precision indoor positioning. Designed for researchers, developers, and enthusiasts, this project leverages Ultra-Wideband (UWB) technology and Inertial Measurement Units (IMUs) to achieve centimeter-level accuracy in diverse applications.
 
@@ -66,7 +66,7 @@
 ## System Architecture
 
 ### Hardware Overview
-![System Architecture](#) <!-- Placeholder for Image 2 -->
+![System Architecture](https://github.com/mehtivakili/Arastronaut/blob/main/assets/Screenshot%202024-11-26%20084929%20(Small)%20(Small).png) <!-- Placeholder for Image 2 -->
 
 The platform consists of modular components for easy deployment and scalability. Anchors are strategically placed in fixed locations, while the mobile tag computes its position using trilateration. 
 
@@ -89,7 +89,7 @@ The platform consists of modular components for easy deployment and scalability.
 
 ## Graphical User Interface (GUI)
 
-![GUI Features](#) <!-- Placeholder for Image 3 -->
+![GUI Features](https://github.com/mehtivakili/Arastronaut/blob/main/assets/ezgif-6-539f7a2398.gif) <!-- Placeholder for Image 3 -->
 
 The GUI is designed for user-friendliness and functionality:
 - **IMU Calibration**:
@@ -107,13 +107,16 @@ The GUI is designed for user-friendliness and functionality:
 
 ## Experimental Validation
 
-![Verification Animation](#) <!-- Placeholder for GIF -->
+![Verification Animation](https://github.com/mehtivakili/Arastronaut/blob/main/assets/Figure%201%202024-11-04%2022-43-26%20(1).gif) <!-- Placeholder for GIF -->
 
 ### IMU Accuracy Validation
 The IMU was tested on a precision rotary table to compare its output against a reference encoder. Results showed a **Root Mean Square Error (RMSE)** of 2 degrees for orientation estimation.
+![IMU](https://github.com/mehtivakili/Arastronaut/blob/main/assets/imu.jpg) <!-- Placeholder for Image 3-->
+
 
 ### UWB Ranging Analysis
 Two DWM1000 modules were tested in a controlled environment. Linear regression modeling reduced the RMSE from **15 cm to 6 cm**, showcasing the system’s high accuracy.
+![UWB](https://github.com/mehtivakili/Arastronaut/blob/main/assets/uwb.jpg) <!-- Placeholder for Image 4 -->
 
 ---
 
