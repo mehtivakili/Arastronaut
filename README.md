@@ -1,8 +1,8 @@
 # Arastronaut: Open-Source Indoor Positioning Platform
 
-![Arastronaut Logo](https://github.com/mehtivakili/Arastronaut/blob/main/assets/menu_page-0001%20(Small).jpg) <!-- Placeholder for Image 1 -->
-
 **Arastronaut** is a cutting-edge open-source platform that combines hardware and software to deliver high-precision indoor positioning. Designed for researchers, developers, and enthusiasts, this project leverages Ultra-Wideband (UWB) technology and Inertial Measurement Units (IMUs) to achieve centimeter-level accuracy in diverse applications.
+
+![Arastronaut Logo](https://github.com/mehtivakili/Arastronaut/blob/main/assets/menu_page-0001%20(Small).jpg) <!-- Placeholder for Image 1 -->
 
 ---
 
