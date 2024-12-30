@@ -179,3 +179,9 @@ This project is licensed under the MIT License. See the [LICENSE](./LICENSE) fil
 This project is based on the paper:  
 _Vakili, M., Mirjalili, A. S., Dindarloo, M. R., Sharifi, A., Taghirad, H. D., “Arastronaut: An Open Source UWB/IMU Hardware and Software for Indoor Positioning”_, Proceedings of ICRoM 2024.
 
+## Documentation
+
+You can read the full research paper here:
+
+[**Arastronaut: An Open Source UWB/IMU Hardware and Software for Indoor Positioning**](https://drive.google.com/file/d/16NdCd8w1salMFmqQaL-lHD3fAP5jMGwg/view?usp=sharing)
+
