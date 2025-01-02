@@ -196,7 +196,7 @@ def index():
 
                         # Send the GET request within the POST request handler
     try:
-        response = requests.get('http://192.168.4.1/mode?mode=99')
+        response = requests.get('http://192.168.4.1/mode?mode=99', timeout=1)
         if response.status_code == 200:
             print("GET request successful")
         else:
@@ -294,7 +294,7 @@ def calibration():
     stop_udp_thread(udp_thread4_stop_event, udp_thread4)
                         # Send the GET request within the POST request handler
     try:
-        response = requests.get('http://192.168.4.1/mode?mode=99')
+        response = requests.get('http://192.168.4.1/mode?mode=99', timeout=2)
         if response.status_code == 200:
             print("GET request successful")
         else:
@@ -336,7 +336,7 @@ def uwb_udp():
         # Start the UDP thread
                 # Send the GET request within the POST request handler
         try:
-            response = requests.get('http://192.168.4.1/mode?mode=2')
+            response = requests.get('http://192.168.4.1/mode?mode=2', timeout=2)
             if response.status_code == 200:
                 print("GET request successful")
             else:
@@ -406,7 +406,7 @@ def uwb_udp2():
 def magnometer_calibration():
     # Send the GET request to set the mode
     try:
-        response = requests.get('http://192.168.4.1/mode?mode=5')
+        response = requests.get('http://192.168.4.1/mode?mode=5', timeout=2)
         if response.status_code == 200:
             print("GET request successful")
         else:
@@ -465,7 +465,7 @@ def device_orientation():
 
                         # Send the GET request within the POST request handler
         try:
-            response = requests.get('http://192.168.4.1/mode?mode=5')
+            response = requests.get('http://192.168.4.1/mode?mode=5', timeout=2)
             if response.status_code == 200:
                 print("GET request successful")
             else:
@@ -520,7 +520,7 @@ def imu_calib():
 
                 # Send the GET request within the POST request handler
         try:
-            response = requests.get('http://192.168.4.1/mode?mode=5')
+            response = requests.get('http://192.168.4.1/mode?mode=5', timeout=2)
             if response.status_code == 200:
                 print("GET request successful")
             else:
