@@ -1,0 +1,6 @@
+@echo off
+echo Starting Node.js server...
+start cmd /c "node server.js"
+echo Running Python script...
+start cmd /c "python app.py"
+pause
