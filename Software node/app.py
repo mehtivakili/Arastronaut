@@ -184,6 +184,34 @@ def stop_udp_thread(stop_event, thread):
     if thread:
         thread.join()  # Wait for the thread to finish
 
+# Define the relative path to the script
+SCRIPT_RELATIVE_PATH = os.path.join("Software node", "IMU_CUBE1.py")
+
+def run_imu_script():
+    """
+    Function to execute the IMU_CUBE1.py script in a separate thread.
+    """
+    # Construct the absolute path to the script
+    script_path = os.path.abspath(SCRIPT_RELATIVE_PATH)
+    try:
+        result = subprocess.run(['python', script_path], capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"Script Output:\n{result.stdout}")
+        else:
+            print(f"Error:\n{result.stderr}")
+    except Exception as e:
+        print(f"Failed to execute script: {str(e)}")
+
+
+@app.route('/device_orientation', methods=['POST'])
+def imu_orientation():
+    """
+    Route to trigger the IMU orientation script in a new thread.
+    """
+    imu_thread = threading.Thread(target=run_imu_script)
+    imu_thread.start()
+    return jsonify({"status": "IMU script started in a new thread."})
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
