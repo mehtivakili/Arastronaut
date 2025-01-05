@@ -27,8 +27,10 @@ app.get('/', (req, res) => {
 
 // Handle connection events
 io.on('connection', (socket) => {
-  console.log('a user connected');
-
+  console.log(`A user connected: ${socket.id}`);
+  socket.on('disconnect', () => {
+    console.log(`A user disconnected: ${socket.id}`);
+  });
   // Handle 'message' events
   socket.on('message', (msg) => {
     console.log('message: ' + msg);

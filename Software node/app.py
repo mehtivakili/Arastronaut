@@ -1540,6 +1540,7 @@ Timer = 0
 def start_client():
     sio_client.connect('http://localhost:3000')  # Connect to Node.js server on port 3000
     sio_client.wait()
+    
 
 
 @app.route('/start_recording', methods=['POST'])
@@ -1761,12 +1762,16 @@ def message(data):
 def disconnect():
     print('Client disconnected from server')
 
+# Avoid multiple threads initializing the client
+client_started = False
 
 if __name__ == "__main__":
-    # Start the Socket.IO client in a separate thread
-    client_thread = threading.Thread(target=start_client)
-    client_thread.start()
-    socketio.run(app, debug=True)
+    if not client_started:
+        # Start the Socket.IO client in a separate thread
+        client_started = True
+        client_thread = threading.Thread(target=start_client)
+        client_thread.start()
 
+    socketio.run(app, debug=False, use_reloader=False)
         
 
