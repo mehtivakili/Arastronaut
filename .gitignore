@@ -30,9 +30,7 @@
 *.exe
 *.out
 *.app
-Software node/my-flask-electron/main.js
-Software node/my-flask-electron/package-lock.json
-Software node/my-flask-electron/package.json
+
 Software node/my-flask-electron/node_modules/.package-lock.json
 Software node/my-flask-electron/node_modules/.bin/electron
 Software node/my-flask-electron/node_modules/.bin/electron.cmd
