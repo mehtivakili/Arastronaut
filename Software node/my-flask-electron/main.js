@@ -5,9 +5,15 @@ const path = require('path');
 let mainWindow;
 let nodeProcess, pythonProcess;
 
+// Helper function to resolve paths relative to the parent folder
+function resolveParentPath(fileName) {
+    return path.join(app.getAppPath(), '..', fileName);
+}
+
 app.on('ready', () => {
     // Start the first program (Node.js server)
-    nodeProcess = spawn('node', [path.join(__dirname, '../server.js')]);
+    const serverPath = resolveParentPath('server.js');
+    nodeProcess = spawn('node', [serverPath]);
 
     nodeProcess.stdout.on('data', (data) => {
         console.log(`Node.js Server: ${data}`);
@@ -22,7 +28,8 @@ app.on('ready', () => {
     });
 
     // Start the second program (Python Flask app)
-    pythonProcess = spawn('python', [path.join(__dirname, '../app.py')]);
+    const pythonPath = resolveParentPath('app.py');
+    pythonProcess = spawn('python', [pythonPath]);
 
     pythonProcess.stdout.on('data', (data) => {
         console.log(`Flask App: ${data}`);
