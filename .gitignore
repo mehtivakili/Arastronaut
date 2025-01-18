@@ -7962,3 +7962,4 @@ Software node/my-flask-electron/node_modules/yocto-queue/license
 Software node/my-flask-electron/node_modules/yocto-queue/package.json
 Software node/my-flask-electron/node_modules/yocto-queue/readme.md
 Software node/my-flask-electron/out/make/zip/win32/x64/my-flask-electron-win32-x64-1.0.0.zip
+Hardware node/lib/QMC5883LCompass
