@@ -7,3 +7,6 @@ critical advice on assembly:
   2. Don't forget soldering the esp32 GND under the chip
   3. Pay attention to the chip's temperature tolerance and timing of heat
   4. Cable's health
+  5. Heaters max best tolerance 380deg
+  6. Add solder on the tip before turning off
+  7. Best temp for desoldering chip 250~300 and 450 for damaged ones
